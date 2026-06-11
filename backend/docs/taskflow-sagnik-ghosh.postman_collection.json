@@ -1,0 +1,547 @@
+{
+  "info": {
+    "_postman_id": "0a69807d-5ee6-42a6-b7c6-eed7fe76dd04",
+    "name": "taskflow-sagnik-ghosh",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26068075"
+  },
+  "item": [
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4000/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "register new user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Nikolas Cage\",\n    \"email\": \"nik@example.com\",\n    \"password\": \"Secret@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST \"http://localhost:4000/auth/register\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane@example.com\",\n    \"password\": \"secret123\"\n  }'"
+          },
+          "response": []
+        },
+        {
+          "name": "login",
+          "request": {
+            "auth": {
+              "type": "bearer"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST \"http://localhost:4000/auth/login\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"jane@example.com\",\n    \"password\": \"secret123\"\n  }'"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "projects",
+      "item": [
+        {
+          "name": "get projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -X GET \"http://localhost:4000/projects\" \\\n  -H \"Authorization: Bearer TOKEN\""
+          },
+          "response": []
+        },
+        {
+          "name": "create project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Website Redesign\",\"description\":\"Q2 website redesign project\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/projects",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -X POST \"http://localhost:4000/projects\" \\\n  -H \"Authorization: Bearer TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Website Redesign\",\"description\":\"Q2 website redesign project\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "get project detail & tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -X GET \"http://localhost:4000/projects/PROJECT_ID\" \\\n  -H \"Authorization: Bearer TOKEN\""
+          },
+          "response": []
+        },
+        {
+          "name": "update project",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Website Redesign v3\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -X PATCH \"http://localhost:4000/projects/PROJECT_ID\" \\\n  -H \"Authorization: Bearer TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Website Redesign v2\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "delete project",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -X DELETE \"http://localhost:4000/projects/PROJECT_ID\" \\\n  -H \"Authorization: Bearer TOKEN\""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "tasks",
+      "item": [
+        {
+          "name": "get tasks by project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "cookies.txt"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID/tasks",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID",
+                "tasks"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -b cookies.txt \\\n  \"http://localhost:4000/projects/PROJECT_ID/tasks\""
+          },
+          "response": []
+        },
+        {
+          "name": "create task by project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "cookies.txt"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\":\"BBBBBBBBBB\",\n    \"description\":\"BBBBBBBBBBB layout\",\n    \"status\":\"done\",\n    \"priority\":\"low\",\n    \"assignee_id\": null,\n    \"due_date\":\"2026-05-01\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID/tasks",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID",
+                "tasks"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -b cookies.txt -X POST \"http://localhost:4000/projects/PROJECT_ID/tasks\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"title\":\"Design homepage\",\n    \"description\":\"Draft initial layout\",\n    \"status\":\"todo\",\n    \"priority\":\"high\",\n    \"assignee_id\": null,\n    \"due_date\":\"2026-05-01\"\n  }'"
+          },
+          "response": []
+        },
+        {
+          "name": "update task",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "cookies.txt"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"assignee_id\": \"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa01\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/tasks/TASK_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "tasks",
+                "TASK_ID"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -b cookies.txt -X PATCH \"http://localhost:4000/tasks/TASK_ID\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"status\":\"in_progress\" }'"
+          },
+          "response": []
+        },
+        {
+          "name": "delete task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "cookies.txt"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/tasks/TASK_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "tasks",
+                "TASK_ID"
+              ]
+            },
+            "description": "Generated from cURL: curl -s -b cookies.txt -X DELETE \"http://localhost:4000/tasks/TASK_ID\""
+          },
+          "response": []
+        },
+        {
+          "name": "filter tasks by status only",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer <JWT_TOKEN>",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID/tasks?status=in_progress",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "in_progress"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "filter tasks by assignee only",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer <JWT_TOKEN>"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID/tasks?assignee=ASSIGNEE_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "assignee",
+                  "value": "ASSIGNEE_ID"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "filter tasks by status and assignee both",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer <JWT_TOKEN>"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/<PROJECT_ID>/tasks?status=in_progress&assignee=<ASSIGNEE_UUID>",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "<PROJECT_ID>",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "in_progress"
+                },
+                {
+                  "key": "assignee",
+                  "value": "<ASSIGNEE_UUID>"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "task counts by status and by assignee",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer <JWT_TOKEN>"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/<PROJECT_ID>/stats",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "<PROJECT_ID>",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+import { Pool, type QueryResult } from "pg";
+import config from "./index";
+import logger from "./logger";
+
+/**
+ * PostgreSQL Database Manager
+ * Handles the connection and disconnection of the PostgreSQL database
+ * Provides a connection object for further operations
+ */
+class PostgreSQLConnection {
+  private pool: Pool | null = null;
+
+  getPool(): Pool {
+    if (!this.pool) {
+      this.pool = new Pool({
+        host: config.postgres.host,
+        port: config.postgres.port,
+        database: config.postgres.database,
+        user: config.postgres.user,
+        password: config.postgres.password,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      });
+
+      this.pool.on("error", (err: Error) => {
+        logger.error("Unexpected error on idle PG client", err);
+      });
+
+      logger.info("PG Pool Created");
+    }
+    return this.pool;
+  }
+
+  async testConnection() {
+    try {
+      const pool = this.getPool();
+      const client = await pool.connect();
+      const result = await client.query("SELECT NOW()");
+      client.release();
+
+      logger.info(`PG connected successfully at ${result.rows[0].now}`);
+    } catch (error) {
+      logger.error("Failed to connect to PG", error);
+      throw error;
+    }
+  }
+
+  async query(
+    text: string,
+    params?: unknown[],
+  ): Promise<QueryResult> {
+    const pool = this.getPool();
+    const start = Date.now();
+    try {
+      const result = await pool.query(text, params);
+      const duration = Date.now() - start;
+      logger.debug("Executed query", { text, duration, rows: result.rowCount });
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error("Query error:", { text, error: message });
+      throw error;
+    }
+  }
+
+  async close() {
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+      logger.info("PG pool closed!");
+    }
+  }
+}
+
+export default new PostgreSQLConnection();

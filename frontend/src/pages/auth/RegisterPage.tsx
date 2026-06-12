@@ -1,15 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
-import {
-  Alert,
-  Box,
-  Button,
-  Container,
-  Link,
-  Paper,
-  TextField,
-  Typography,
-} from "@mui/material";
 
 import {
   registerSchema,
@@ -17,6 +7,8 @@ import {
 } from "../../modules/auth/schemas/auth.schemas";
 import { useAuth } from "../../modules/auth/context/useAuth.ts";
 import { handleAuthFormError } from "../../shared/utils/authFormErrors";
+import { DarkModeToggle } from "../../shared/ui/DarkModeToggle";
+import { Logo } from "../../shared/ui/Logo";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -27,6 +19,7 @@ export function RegisterPage() {
     email: "",
     password: "",
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<
@@ -37,8 +30,9 @@ export function RegisterPage() {
     () =>
       values.name.trim().length > 0 &&
       values.email.trim().length > 0 &&
-      values.password.length > 0,
-    [values.email, values.name, values.password],
+      values.password.length > 0 &&
+      termsAccepted,
+    [termsAccepted, values.email, values.name, values.password],
   );
 
   async function onSubmit() {
@@ -75,83 +69,119 @@ export function RegisterPage() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 6 }}>
-      <Box sx={{ display: "grid", gap: 2 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            Register
-          </Typography>
-        </Box>
+    <div className="auth-page">
+      <div className="auth-blob auth-blob--tr" />
+      <div className="auth-blob auth-blob--bl" />
+      <DarkModeToggle className="icon-btn icon-btn--auth" />
 
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <Box
-            component="form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void onSubmit();
-            }}
-            sx={{ display: "grid", gap: 2 }}
+      <div className="auth-card">
+        <div className="auth-card__logo">
+          <Logo />
+        </div>
+
+        <h2 className="auth-card__title">Get started free</h2>
+        <p className="auth-card__subtitle" style={{ marginBottom: 24 }}>
+          No credit card required
+        </p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void onSubmit();
+          }}
+        >
+          {formError ? <div className="alert-error" style={{ marginBottom: 13 }}>{formError}</div> : null}
+
+          <div className="auth-fields" style={{ gap: 12 }}>
+            <div>
+              <label className="field-label" htmlFor="name">
+                Full name
+              </label>
+              <input
+                id="name"
+                className="field-input"
+                type="text"
+                placeholder="Robin Baker"
+                value={values.name}
+                onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
+                autoComplete="name"
+              />
+              {fieldErrors.name ? (
+                <div className="field-error">{fieldErrors.name}</div>
+              ) : null}
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="email">
+                Work email
+              </label>
+              <input
+                id="email"
+                className="field-input"
+                type="email"
+                placeholder="you@company.com"
+                value={values.email}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, email: e.target.value }))
+                }
+                autoComplete="email"
+              />
+              {fieldErrors.email ? (
+                <div className="field-error">{fieldErrors.email}</div>
+              ) : null}
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                className="field-input"
+                type="password"
+                placeholder="Min. 8 characters"
+                value={values.password}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, password: e.target.value }))
+                }
+                autoComplete="new-password"
+              />
+              {fieldErrors.password ? (
+                <div className="field-error">{fieldErrors.password}</div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="auth-terms">
+            <input
+              id="terms"
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+            />
+            <label htmlFor="terms">
+              I agree to the <span style={{ color: "var(--blue)" }}>Terms of Service</span> and{" "}
+              <span style={{ color: "var(--blue)" }}>Privacy Policy</span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-primary--lg"
+            style={{ width: "100%", marginBottom: 22 }}
+            disabled={!canSubmit || submitting}
           >
-            {formError ? <Alert severity="error">{formError}</Alert> : null}
+            {submitting ? "Creating…" : "Create account"}
+          </button>
 
-            <TextField
-              label="Name"
-              value={values.name}
-              onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-              error={Boolean(fieldErrors.name)}
-              helperText={fieldErrors.name}
-              autoComplete="name"
-              fullWidth
-              required
-            />
-
-            <TextField
-              label="Email"
-              type="email"
-              value={values.email}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, email: e.target.value }))
-              }
-              error={Boolean(fieldErrors.email)}
-              helperText={fieldErrors.email}
-              autoComplete="email"
-              fullWidth
-              required
-            />
-
-            <TextField
-              label="Password"
-              type="password"
-              value={values.password}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, password: e.target.value }))
-              }
-              error={Boolean(fieldErrors.password)}
-              helperText={fieldErrors.password}
-              autoComplete="new-password"
-              fullWidth
-              required
-            />
-
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={!canSubmit || submitting}
-            >
-              {submitting ? "Creating…" : "Create account"}
-            </Button>
-
-            <Typography variant="body2" color="text.secondary">
-              Already have an account?{" "}
-              <Link component={RouterLink} to="/login">
-                Log in
-              </Link>
-            </Typography>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+          <p className="auth-switch">
+            Already have an account?{" "}
+            <RouterLink to="/login" className="btn-link btn-link--bold">
+              Sign in
+            </RouterLink>
+          </p>
+        </form>
+      </div>
+    </div>
   );
 }
-

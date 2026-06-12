@@ -1,20 +1,16 @@
-import AddIcon from "@mui/icons-material/Add";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
-  Box,
-  Button,
-  Divider,
-  Alert,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  Plus,
+} from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../modules/auth/context/useAuth.ts";
-import { getProject } from "../../api/projects.api";
+import { getProject, listProjects } from "../../api/projects.api";
 import {
   createTask,
   deleteTask,
@@ -25,20 +21,28 @@ import { toApiError } from "../../shared/utils/apiErrors";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { LoadingState } from "../../shared/ui/LoadingState";
+import { KanbanBoard } from "../../modules/tasks/components/KanbanBoard";
 import {
-  TaskFilters,
-  type TaskAssigneeFilter,
-} from "../../modules/tasks/components/TaskFilters.tsx";
-import { TaskList } from "../../modules/tasks/components/TaskList.tsx";
-import { TaskModal } from "../../modules/tasks/components/TaskModal.tsx";
+  DEFAULT_TASK_FILTERS,
+  FilterPanel,
+  type TaskFilterState,
+} from "../../modules/tasks/components/FilterPanel";
+import {
+  DEFAULT_SORT,
+  SortPanel,
+  type SortState,
+} from "../../modules/tasks/components/SortPanel";
+import { TaskModal } from "../../modules/tasks/components/TaskModal";
+import { projectVisuals, sortTasks } from "../../shared/theme/design";
 import type { Task, TaskStatus } from "../../types/tasks";
 
 export function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.id ?? "";
-
+  const navigate = useNavigate();
   const { user } = useAuth();
   const currentUserId = user?.id ?? "me";
+  const userName = user?.name ?? "Me";
 
   const queryClient = useQueryClient();
   const projectQuery = useQuery({
@@ -47,40 +51,88 @@ export function ProjectDetailPage() {
     enabled: Boolean(projectId),
   });
 
-  const [filters, setFilters] = useState<{
-    status: TaskStatus | "all";
-    assignee: TaskAssigneeFilter;
-  }>({ status: "all", assignee: "all" });
+  const projectsQuery = useQuery({
+    queryKey: ["projects"],
+    queryFn: listProjects,
+  });
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks", projectId, filters],
-    queryFn: () =>
-      listTasks(projectId, {
-        status: filters.status === "all" ? undefined : filters.status,
-        // Backend only accepts a UUID here; "unassigned" is handled client-side below.
-        assignee: filters.assignee === "me" ? currentUserId : undefined,
-      }),
+    queryKey: ["tasks", projectId],
+    queryFn: () => listTasks(projectId, {}),
     enabled: Boolean(projectId),
   });
 
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterState, setFilterState] = useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT);
+
   const [taskModalOpen, setTaskModalOpen] = useState(false);
-  const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">(
-    "create",
-  );
+  const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
   const [tasksActionError, setTasksActionError] = useState<string | null>(null);
 
-  const tasks = useMemo(() => {
-    return (tasksQuery.data ?? []) as Task[];
-  }, [tasksQuery.data]);
+  const tasks = useMemo(() => (tasksQuery.data ?? []) as Task[], [tasksQuery.data]);
 
   const filtered = useMemo(() => {
-    return tasks.filter((t) => {
-      if (filters.assignee === "unassigned" && t.assigneeId !== null)
+    let result = tasks.filter((t) => {
+      if (
+        filterState.filterStatus.length > 0 &&
+        !filterState.filterStatus.includes(t.status)
+      ) {
         return false;
+      }
+      if (
+        filterState.filterPriority.length > 0 &&
+        !filterState.filterPriority.includes(t.priority)
+      ) {
+        return false;
+      }
+      if (filterState.filterAssignee.length > 0) {
+        const matchesMe =
+          filterState.filterAssignee.includes("me") &&
+          t.assigneeId === currentUserId;
+        const matchesUnassigned =
+          filterState.filterAssignee.includes("unassigned") && !t.assigneeId;
+        if (!matchesMe && !matchesUnassigned) return false;
+      }
+      if (filterState.dueFrom && t.dueDate && t.dueDate < filterState.dueFrom) {
+        return false;
+      }
+      if (filterState.dueTo && t.dueDate && t.dueDate > filterState.dueTo) {
+        return false;
+      }
       return true;
     });
-  }, [filters.assignee, tasks]);
+
+    result = sortTasks(result, sortState.sortBy, sortState.sortDir);
+    return result;
+  }, [currentUserId, filterState, sortState, tasks]);
+
+  const activeFilterCount =
+    filterState.filterStatus.length +
+    filterState.filterPriority.length +
+    filterState.filterAssignee.length +
+    (filterState.dueFrom ? 1 : 0) +
+    (filterState.dueTo ? 1 : 0);
+
+  const sortIsActive =
+    sortState.sortBy !== DEFAULT_SORT.sortBy ||
+    sortState.sortDir !== DEFAULT_SORT.sortDir;
+
+  function openFilterPanel() {
+    setSortOpen(false);
+    setFilterOpen((v) => !v);
+  }
+
+  function openSortPanel() {
+    setFilterOpen(false);
+    setSortOpen((v) => !v);
+  }
+
+  const projectIndex = (projectsQuery.data ?? []).findIndex((p) => p.id === projectId);
+  const { color: projectColor } = projectVisuals(Math.max(0, projectIndex));
 
   const createTaskMutation = useMutation({
     mutationFn: (payload: Omit<Task, "id">) => {
@@ -111,25 +163,20 @@ export function ProjectDetailPage() {
     onMutate: async ({ taskId, patch }) => {
       setTasksActionError(null);
       await queryClient.cancelQueries({ queryKey: ["tasks", projectId] });
-      const previous = queryClient.getQueryData([
-        "tasks",
-        projectId,
-        filters,
-      ]) as Task[] | undefined;
+      const previous = queryClient.getQueryData(["tasks", projectId]) as
+        | Task[]
+        | undefined;
       if (previous) {
-        queryClient.setQueryData(["tasks", projectId, filters], (curr) => {
-          const list = (curr as Task[] | undefined) ?? [];
-          return list.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
-        });
+        queryClient.setQueryData(
+          ["tasks", projectId],
+          previous.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+        );
       }
       return { previous };
     },
     onError: (error, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(
-          ["tasks", projectId, filters],
-          context.previous,
-        );
+        queryClient.setQueryData(["tasks", projectId], context.previous);
       }
       const apiError = toApiError(error);
       setTasksActionError(
@@ -162,7 +209,7 @@ export function ProjectDetailPage() {
         <EmptyState
           title="Project not found"
           description="The project you’re looking for doesn’t exist (or you don’t have access)."
-          actionLabel="Back to projects"
+          actionLabel="Back to dashboard"
           actionHref="/projects"
         />
       );
@@ -182,7 +229,7 @@ export function ProjectDetailPage() {
       <EmptyState
         title="Project not found"
         description="The project you’re looking for doesn’t exist (or you don’t have access)."
-        actionLabel="Back to projects"
+        actionLabel="Back to dashboard"
         actionHref="/projects"
       />
     );
@@ -196,61 +243,63 @@ export function ProjectDetailPage() {
     await createTaskMutation.mutateAsync(next);
   }
 
-  async function handleDeleteTask(taskId: string) {
-    await deleteTaskMutation.mutateAsync(taskId);
+  function openCreateTask(status: TaskStatus = "todo") {
+    setTaskModalMode("create");
+    setEditingTask(null);
+    setDefaultStatus(status);
+    setTaskModalOpen(true);
   }
 
   return (
-    <Box sx={{ display: "grid", gap: 2.5 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Button
-          component={RouterLink}
-          to="/projects"
-          startIcon={<ArrowBackIcon />}
-          variant="text"
-        >
-          Projects
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setTaskModalMode("create");
-            setEditingTask(null);
-            setTaskModalOpen(true);
-          }}
-        >
-          Create task
-        </Button>
-      </Stack>
+    <>
+      <div className="board-view" style={{ flex: 1, minHeight: 0 }}>
+        <div className="board-header">
+          <div className="breadcrumb">
+            <button type="button" className="breadcrumb__link" onClick={() => navigate("/projects")}>
+              Dashboard
+            </button>
+            <ChevronRight size={12} color="var(--secondary)" />
+            <span style={{ fontWeight: 500, color: "var(--ink)" }}>{project.name}</span>
+          </div>
 
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h5" sx={{ fontWeight: 850 }}>
-          {project.name}
-        </Typography>
-        {project.description ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            {project.description}
-          </Typography>
+          <div className="board-title-row" style={{ marginBottom: 13 }}>
+            <span className="board-title-dot" style={{ background: projectColor }} />
+            <h1 className="board-title">{project.name}</h1>
+            <ChevronDown size={14} color="var(--secondary)" />
+          </div>
+        </div>
+
+        <div className="board-toolbar">
+          <button type="button" className="btn btn-primary btn-primary--sm" onClick={() => openCreateTask()}>
+            <Plus size={12} strokeWidth={2.5} />
+            New task
+          </button>
+          <div className="toolbar-separator" />
+          <button
+            type="button"
+            className={`toolbar-btn${activeFilterCount > 0 ? " toolbar-btn--active" : ""}`}
+            onClick={openFilterPanel}
+          >
+            <Filter size={13} />
+            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </button>
+          <button
+            type="button"
+            className={`toolbar-btn${sortIsActive ? " toolbar-btn--active" : ""}`}
+            onClick={openSortPanel}
+          >
+            <ArrowUpDown size={13} />
+            Sort
+          </button>
+        </div>
+
+        {tasksActionError ? (
+          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
+            {tasksActionError}
+          </div>
         ) : null}
-      </Paper>
 
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Tasks
-          </Typography>
-          {tasksActionError ? (
-            <Alert severity="error">{tasksActionError}</Alert>
-          ) : null}
-          <TaskFilters
-            status={filters.status}
-            assignee={filters.assignee}
-            onChange={(next) => setFilters(next)}
-          />
-
-          <Divider />
-
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
           {tasksQuery.isLoading ? (
             <LoadingState label="Loading tasks…" />
           ) : tasksQuery.isError ? (
@@ -260,52 +309,68 @@ export function ProjectDetailPage() {
               onAction={() => void tasksQuery.refetch()}
             />
           ) : tasks.length === 0 ? (
-            <EmptyState
-              title="No tasks yet"
-              description="Create your first task to start tracking work in this project."
-              actionLabel="Create task"
-              onAction={() => {
-                setTaskModalMode("create");
-                setEditingTask(null);
-                setTaskModalOpen(true);
-              }}
-            />
+            <div className="page-scroll" style={{ flex: 1 }}>
+              <EmptyState
+                title="No tasks yet"
+                description="Create your first task to start tracking work in this project."
+                actionLabel="Create task"
+                onAction={() => openCreateTask()}
+              />
+            </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              title="No tasks match your filters"
-              description="Try changing status or assignee filters."
-              actionLabel="Reset filters"
-              onAction={() => setFilters({ status: "all", assignee: "all" })}
-            />
+            <div className="page-scroll" style={{ flex: 1 }}>
+              <EmptyState
+                title="No tasks match your filters"
+                description="Try changing your filter settings."
+                actionLabel="Clear filters"
+                onAction={() => setFilterState(DEFAULT_TASK_FILTERS)}
+              />
+            </div>
           ) : (
-            <TaskList
+            <KanbanBoard
               tasks={filtered}
               currentUserId={currentUserId}
-              onEdit={(task) => {
+              userName={userName}
+              onAddTask={openCreateTask}
+              onEditTask={(task) => {
                 setTaskModalMode("edit");
                 setEditingTask(task);
                 setTaskModalOpen(true);
               }}
-              onChangeStatus={(taskId, status) => {
-                void updateTaskMutation.mutateAsync({
-                  taskId,
-                  patch: { status },
-                });
-              }}
             />
           )}
-        </Stack>
-      </Paper>
+
+          {filterOpen ? (
+            <FilterPanel
+              tasks={tasks}
+              state={filterState}
+              currentUserId={currentUserId}
+              onChange={(next) => setFilterState((s) => ({ ...s, ...next }))}
+              onClear={() => setFilterState(DEFAULT_TASK_FILTERS)}
+              onClose={() => setFilterOpen(false)}
+            />
+          ) : null}
+          {sortOpen ? (
+            <SortPanel
+              state={sortState}
+              onChange={(next) => setSortState((s) => ({ ...s, ...next }))}
+              onClear={() => setSortState(DEFAULT_SORT)}
+              onClose={() => setSortOpen(false)}
+            />
+          ) : null}
+        </div>
+      </div>
 
       <TaskModal
         open={taskModalOpen}
         mode={taskModalMode}
         task={editingTask}
         currentUserId={currentUserId}
+        defaultStatus={defaultStatus}
         onClose={() => setTaskModalOpen(false)}
         onSave={handleSaveTask}
-        onDelete={handleDeleteTask}
+        onDelete={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
       />
-    </Box>
+    </>
   );
 }

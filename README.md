@@ -63,9 +63,33 @@ docker compose up --build
 
 **Local development without Docker (optional)**
 
-- In **`backend/`**, run **`npm install`** if you are not using Docker.
+Run the database in Docker, then start the API and UI on your machine:
 
-- In **`frontend/`**, run **`npm install`** if you are not using Docker.
+```bash
+# 1. Database only (keep this running)
+docker compose up postgres -d
+
+# 2. Backend (from repo root)
+cd backend
+npm install          # required once — without this, `npm run dev` fails with "tsx: command not found"
+cp .env.example .env # if you don't have backend/.env yet
+# In backend/.env use POSTGRES_HOST=localhost (not `postgres` — that hostname only works inside Docker)
+npm run dev          # http://localhost:4000
+
+# 3. Frontend (new terminal)
+cd frontend
+npm install
+npm run dev          # http://localhost:5173 — Vite proxies /api → localhost:4000
+```
+
+**Common local issues**
+
+| Symptom | Fix |
+| -------- | ----- |
+| `tsx: command not found` or `MODULE_NOT_FOUND` | Run `npm install` in `backend/` (dependencies are not committed). |
+| `ENOTFOUND postgres` | Set `POSTGRES_HOST=localhost` in `backend/.env` when running the API on your host. |
+| `ECONNREFUSED` on port 5432 | Start Postgres: `docker compose up postgres -d` (or run a local Postgres on 5432). |
+| `npm run start` fails | Run `npm run build` first — `start` runs compiled `dist/server.js`. Prefer `npm run dev` while developing. |
 
 ### PostgreSQL in pgAdmin (Docker Compose)
 

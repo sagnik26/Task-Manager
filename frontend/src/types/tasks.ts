@@ -9,5 +9,7 @@ export type Task = {
   priority: TaskPriority;
   assigneeId: string | null;
   dueDate: string | null; // ISO date (YYYY-MM-DD) for UI simplicity
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 

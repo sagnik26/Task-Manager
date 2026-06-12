@@ -1,20 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-} from "@mui/material";
+import { X } from "lucide-react";
 
 import { toApiError } from "../../../shared/utils/apiErrors";
+import { TASK_STATUS_COLUMNS, PRIORITY_META } from "../../../shared/theme/design";
 import { taskUpsertSchema } from "../task.schemas";
 import type { Task, TaskPriority, TaskStatus } from "../../../types/tasks";
 
@@ -27,11 +15,11 @@ type TaskDraft = {
   dueDate: string;
 };
 
-function toDraft(task?: Task | null): TaskDraft {
+function toDraft(task?: Task | null, defaultStatus?: TaskStatus): TaskDraft {
   return {
     title: task?.title ?? "",
     description: task?.description ?? "",
-    status: task?.status ?? "todo",
+    status: task?.status ?? defaultStatus ?? "todo",
     priority: task?.priority ?? "medium",
     assigneeId: task?.assigneeId ?? null,
     dueDate: task?.dueDate ?? "",
@@ -43,6 +31,7 @@ export function TaskModal({
   mode,
   task,
   currentUserId,
+  defaultStatus,
   onClose,
   onSave,
   onDelete,
@@ -51,11 +40,12 @@ export function TaskModal({
   mode: "create" | "edit";
   task?: Task | null;
   currentUserId: string;
+  defaultStatus?: TaskStatus;
   onClose: () => void;
   onSave: (next: Omit<Task, "id">, existingId?: string) => Promise<void> | void;
   onDelete?: (taskId: string) => Promise<void> | void;
 }) {
-  const [draft, setDraft] = useState<TaskDraft>(() => toDraft(task));
+  const [draft, setDraft] = useState<TaskDraft>(() => toDraft(task, defaultStatus));
   const [submitting, setSubmitting] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
@@ -63,21 +53,24 @@ export function TaskModal({
 
   useEffect(() => {
     if (!open) return;
-    setDraft(toDraft(task));
+    setDraft(toDraft(task, defaultStatus));
     setTitleError(null);
     setDueDateError(null);
     setSubmitError(null);
-  }, [open, task]);
+  }, [defaultStatus, open, task]);
 
   const canSubmit = useMemo(
     () => draft.title.trim().length > 0 && !submitting,
     [draft.title, submitting],
   );
 
+  if (!open) return null;
+
   async function handleSave() {
     setTitleError(null);
     setDueDateError(null);
     setSubmitError(null);
+
     const parsed = taskUpsertSchema.safeParse({
       title: draft.title.trim(),
       description: draft.description.trim() ? draft.description.trim() : undefined,
@@ -86,6 +79,7 @@ export function TaskModal({
       assigneeId: draft.assigneeId,
       dueDate: draft.dueDate ? draft.dueDate : null,
     });
+
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
@@ -94,6 +88,7 @@ export function TaskModal({
       }
       return;
     }
+
     try {
       setSubmitting(true);
       await onSave(
@@ -137,143 +132,184 @@ export function TaskModal({
       onClose();
     } catch (error) {
       const apiError = toApiError(error);
-      if (apiError.kind === "forbidden") {
-        setSubmitError("You don’t have permission to delete this task.");
-        return;
-      }
-      setSubmitError(apiError.message);
+      setSubmitError(
+        apiError.kind === "forbidden"
+          ? "You don’t have permission to delete this task."
+          : apiError.message,
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{mode === "create" ? "Create task" : "Edit task"}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1, display: "grid", gap: 2 }}>
-          {submitError ? <Alert severity="error">{submitError}</Alert> : null}
-          <TextField
-            label="Title"
-            value={draft.title}
-            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-            error={Boolean(titleError)}
-            helperText={titleError ?? " "}
-            autoFocus
-            required
-          />
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      role="presentation"
+    >
+      <div
+        className="modal-card"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal
+        aria-labelledby="task-modal-title"
+      >
+        <div className="modal-card__header">
+          <h3 className="modal-card__title" id="task-modal-title">
+            {mode === "create" ? "Create new task" : "Edit task"}
+          </h3>
+          <button type="button" className="icon-btn icon-btn--sm" onClick={onClose} aria-label="Close">
+            <X size={15} />
+          </button>
+        </div>
 
-          <TextField
-            label="Description"
-            value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-            multiline
-            minRows={3}
-          />
+        <div className="modal-card__body">
+          {submitError ? <div className="alert-error" style={{ marginBottom: 15 }}>{submitError}</div> : null}
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 2,
-            }}
-          >
-            <FormControl size="small" fullWidth>
-              <InputLabel id="task-status">Status</InputLabel>
-              <Select
-                labelId="task-status"
-                label="Status"
+          <div style={{ marginBottom: 15 }}>
+            <label className="field-label" htmlFor="task-title">
+              Task title
+            </label>
+            <input
+              id="task-title"
+              className="field-input"
+              style={{ fontSize: 15 }}
+              placeholder="What needs to be done?"
+              value={draft.title}
+              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+              autoFocus
+            />
+            {titleError ? <div className="field-error">{titleError}</div> : null}
+          </div>
+
+          <div style={{ marginBottom: 15 }}>
+            <label className="field-label" htmlFor="task-description">
+              Description
+            </label>
+            <textarea
+              id="task-description"
+              className="field-input"
+              style={{ height: 88, padding: "10px 14px", resize: "vertical" }}
+              placeholder="Optional details"
+              value={draft.description}
+              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+            />
+          </div>
+
+          <div className="modal-grid">
+            <div>
+              <label className="field-label" htmlFor="task-status">
+                Status
+              </label>
+              <select
+                id="task-status"
+                className="field-input field-input--md"
                 value={draft.status}
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, status: e.target.value as TaskStatus }))
                 }
               >
-                <MenuItem value="todo">Todo</MenuItem>
-                <MenuItem value="in_progress">In progress</MenuItem>
-                <MenuItem value="done">Done</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" fullWidth>
-              <InputLabel id="task-priority">Priority</InputLabel>
-              <Select
-                labelId="task-priority"
-                label="Priority"
+                {TASK_STATUS_COLUMNS.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="task-priority">
+                Priority
+              </label>
+              <select
+                id="task-priority"
+                className="field-input field-input--md"
                 value={draft.priority}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    priority: e.target.value as TaskPriority,
-                  }))
+                  setDraft((d) => ({ ...d, priority: e.target.value as TaskPriority }))
                 }
               >
-                <MenuItem value="low">Low</MenuItem>
-                <MenuItem value="medium">Medium</MenuItem>
-                <MenuItem value="high">High</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+                {(["low", "medium", "high"] as TaskPriority[]).map((key) => (
+                  <option key={key} value={key}>
+                    {PRIORITY_META[key].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 2,
-            }}
-          >
-            <FormControl size="small" fullWidth>
-              <InputLabel id="task-assignee">Assignee</InputLabel>
-              <Select
-                labelId="task-assignee"
-                label="Assignee"
+          <div className="modal-grid" style={{ marginBottom: 20 }}>
+            <div>
+              <label className="field-label" htmlFor="task-due">
+                Due date
+              </label>
+              <input
+                id="task-due"
+                type="date"
+                className="field-input field-input--md"
+                value={draft.dueDate}
+                onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
+              />
+              {dueDateError ? <div className="field-error">{dueDateError}</div> : null}
+            </div>
+            <div>
+              <label className="field-label" htmlFor="task-assignee">
+                Assignee
+              </label>
+              <select
+                id="task-assignee"
+                className="field-input field-input--md"
                 value={draft.assigneeId ?? ""}
                 onChange={(e) =>
                   setDraft((d) => ({
                     ...d,
-                    assigneeId: e.target.value ? String(e.target.value) : null,
+                    assigneeId: e.target.value ? e.target.value : null,
                   }))
                 }
               >
-                <MenuItem value="">Unassigned</MenuItem>
-                <MenuItem value={currentUserId}>Me</MenuItem>
-              </Select>
-            </FormControl>
+                <option value="">Unassigned</option>
+                <option value={currentUserId}>Me</option>
+              </select>
+            </div>
+          </div>
 
-            <TextField
-              label="Due date"
-              type="date"
-              value={draft.dueDate}
-              onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              error={Boolean(dueDateError)}
-              helperText={dueDateError ?? " "}
-            />
-          </Box>
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        {mode === "edit" && task?.id && onDelete ? (
-          <Button
-            onClick={() => void handleDelete()}
-            disabled={submitting}
-            color="error"
-          >
-            Delete
-          </Button>
-        ) : null}
-        <Button onClick={onClose} disabled={submitting}>
-          Cancel
-        </Button>
-        <Button
-          onClick={() => void handleSave()}
-          variant="contained"
-          disabled={!canSubmit}
-        >
-          {submitting ? "Saving…" : "Save"}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          <div className="modal-actions">
+            {mode === "edit" && task?.id && onDelete ? (
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ height: 38, padding: "0 18px", marginRight: "auto", color: "var(--danger)", borderColor: "var(--danger)" }}
+                onClick={() => void handleDelete()}
+                disabled={submitting}
+              >
+                Delete
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ height: 38, padding: "0 18px" }}
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-primary--sm"
+              style={{ height: 38, padding: "0 20px", boxShadow: "0 2px 8px rgba(0,115,234,0.28)" }}
+              onClick={() => void handleSave()}
+              disabled={!canSubmit}
+            >
+              {submitting ? "Saving…" : mode === "create" ? "Create task" : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
-

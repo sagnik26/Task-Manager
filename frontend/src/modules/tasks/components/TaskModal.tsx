@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 
 import { toApiError } from "../../../shared/utils/apiErrors";
+import { toDateInputValue } from "../../../shared/utils/dates";
 import { TASK_STATUS_COLUMNS, PRIORITY_META } from "../../../shared/theme/design";
 import { taskUpsertSchema } from "../task.schemas";
 import type { ProjectMember } from "../../../api/projects.api";
@@ -23,7 +24,7 @@ function toDraft(task?: Task | null, defaultStatus?: TaskStatus): TaskDraft {
     status: task?.status ?? defaultStatus ?? "todo",
     priority: task?.priority ?? "medium",
     assigneeId: task?.assigneeId ?? null,
-    dueDate: task?.dueDate ?? "",
+    dueDate: toDateInputValue(task?.dueDate),
   };
 }
 

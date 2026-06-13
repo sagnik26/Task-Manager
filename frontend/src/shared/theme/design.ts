@@ -1,4 +1,5 @@
 import type { TaskPriority, TaskStatus } from "../../types/tasks";
+import { normalizeDueDate } from "../utils/dates";
 
 export const BRAND = {
   blue: "#0073EA",
@@ -62,8 +63,10 @@ export function avatarColor(seed: string): string {
 }
 
 export function formatDueDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso + "T00:00:00");
+  const ymd = normalizeDueDate(iso);
+  if (!ymd) return "";
+  const d = new Date(`${ymd}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
   const mo = [
     "Jan",
     "Feb",
@@ -102,6 +105,12 @@ export const SORT_OPTIONS: Array<{ id: SortField; label: string }> = [
   { id: "priority", label: "Priority" },
   { id: "created", label: "Created date" },
   { id: "title", label: "Title (A–Z)" },
+];
+
+export const PROJECT_SORT_OPTIONS: Array<{ id: SortField; label: string }> = [
+  { id: "dueDate", label: "Due date" },
+  { id: "priority", label: "Priority" },
+  { id: "created", label: "Created date" },
 ];
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {

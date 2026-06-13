@@ -37,7 +37,13 @@ import {
   type SortState,
 } from "../../modules/tasks/components/SortPanel";
 import { TaskModal } from "../../modules/tasks/components/TaskModal";
-import { projectVisuals, sortTasks } from "../../shared/theme/design";
+import {
+  applyTaskQuery,
+  countActiveFilters,
+  isQueryActive,
+  isSortActive,
+} from "../../modules/tasks/utils/applyTaskQuery";
+import { PROJECT_SORT_OPTIONS, projectVisuals } from "../../shared/theme/design";
 import type { Task, TaskStatus } from "../../types/tasks";
 
 export function ProjectDetailPage() {
@@ -75,8 +81,12 @@ export function ProjectDetailPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
-  const [filterState, setFilterState] = useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
-  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT);
+  const [appliedFilterState, setAppliedFilterState] =
+    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [appliedSortState, setAppliedSortState] = useState<SortState>(DEFAULT_SORT);
+  const [draftFilterState, setDraftFilterState] =
+    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [draftSortState, setDraftSortState] = useState<SortState>(DEFAULT_SORT);
 
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
@@ -87,60 +97,69 @@ export function ProjectDetailPage() {
 
   const tasks = useMemo(() => (tasksQuery.data ?? []) as Task[], [tasksQuery.data]);
 
-  const filtered = useMemo(() => {
-    let result = tasks.filter((t) => {
-      if (
-        filterState.filterStatus.length > 0 &&
-        !filterState.filterStatus.includes(t.status)
-      ) {
-        return false;
-      }
-      if (
-        filterState.filterPriority.length > 0 &&
-        !filterState.filterPriority.includes(t.priority)
-      ) {
-        return false;
-      }
-      if (filterState.filterAssignee.length > 0) {
-        const matchesMe =
-          filterState.filterAssignee.includes("me") &&
-          t.assigneeId === currentUserId;
-        const matchesUnassigned =
-          filterState.filterAssignee.includes("unassigned") && !t.assigneeId;
-        if (!matchesMe && !matchesUnassigned) return false;
-      }
-      if (filterState.dueFrom && t.dueDate && t.dueDate < filterState.dueFrom) {
-        return false;
-      }
-      if (filterState.dueTo && t.dueDate && t.dueDate > filterState.dueTo) {
-        return false;
-      }
-      return true;
-    });
+  const filtered = useMemo(
+    () =>
+      applyTaskQuery(
+        tasks,
+        { ...appliedFilterState, ...appliedSortState },
+        { currentUserId },
+      ),
+    [appliedFilterState, appliedSortState, currentUserId, tasks],
+  );
 
-    result = sortTasks(result, sortState.sortBy, sortState.sortDir);
-    return result;
-  }, [currentUserId, filterState, sortState, tasks]);
+  const activeFilterCount = countActiveFilters(appliedFilterState);
+  const sortIsActive = isSortActive(appliedSortState);
+  const queryIsActive = isQueryActive(appliedFilterState, appliedSortState);
 
-  const activeFilterCount =
-    filterState.filterStatus.length +
-    filterState.filterPriority.length +
-    filterState.filterAssignee.length +
-    (filterState.dueFrom ? 1 : 0) +
-    (filterState.dueTo ? 1 : 0);
-
-  const sortIsActive =
-    sortState.sortBy !== DEFAULT_SORT.sortBy ||
-    sortState.sortDir !== DEFAULT_SORT.sortDir;
+  function clearFiltersAndSort() {
+    setAppliedFilterState(DEFAULT_TASK_FILTERS);
+    setAppliedSortState(DEFAULT_SORT);
+    setDraftFilterState(DEFAULT_TASK_FILTERS);
+    setDraftSortState(DEFAULT_SORT);
+  }
 
   function openFilterPanel() {
     setSortOpen(false);
-    setFilterOpen((v) => !v);
+    setFilterOpen((open) => {
+      if (open) {
+        setDraftFilterState(appliedFilterState);
+        return false;
+      }
+      setDraftFilterState(appliedFilterState);
+      return true;
+    });
   }
 
   function openSortPanel() {
     setFilterOpen(false);
-    setSortOpen((v) => !v);
+    setSortOpen((open) => {
+      if (open) {
+        setDraftSortState(appliedSortState);
+        return false;
+      }
+      setDraftSortState(appliedSortState);
+      return true;
+    });
+  }
+
+  function applyFilters() {
+    setAppliedFilterState(draftFilterState);
+    setFilterOpen(false);
+  }
+
+  function cancelFilters() {
+    setDraftFilterState(appliedFilterState);
+    setFilterOpen(false);
+  }
+
+  function applySort() {
+    setAppliedSortState(draftSortState);
+    setSortOpen(false);
+  }
+
+  function cancelSort() {
+    setDraftSortState(appliedSortState);
+    setSortOpen(false);
   }
 
   const projectIndex = (projectsQuery.data ?? []).findIndex((p) => p.id === projectId);
@@ -299,6 +318,11 @@ export function ProjectDetailPage() {
             <h1 className="board-title">{project.name}</h1>
             <ChevronDown size={14} color="var(--secondary)" />
           </div>
+          {queryIsActive && tasks.length > 0 ? (
+            <p className="dashboard-subtitle" style={{ marginTop: -8, marginBottom: 8 }}>
+              Showing {filtered.length} of {tasks.length} tasks
+            </p>
+          ) : null}
         </div>
 
         <div className="board-toolbar">
@@ -384,10 +408,10 @@ export function ProjectDetailPage() {
           ) : filtered.length === 0 ? (
             <div className="page-scroll" style={{ flex: 1 }}>
               <EmptyState
-                title="No tasks match your filters"
-                description="Try changing your filter settings."
-                actionLabel="Clear filters"
-                onAction={() => setFilterState(DEFAULT_TASK_FILTERS)}
+                title="No tasks match your filters or sort"
+                description="Try changing your filter or sort settings."
+                actionLabel="Clear filters and sort"
+                onAction={clearFiltersAndSort}
               />
             </div>
           ) : (
@@ -407,19 +431,23 @@ export function ProjectDetailPage() {
           {filterOpen ? (
             <FilterPanel
               tasks={tasks}
-              state={filterState}
+              state={draftFilterState}
               currentUserId={currentUserId}
-              onChange={(next) => setFilterState((s) => ({ ...s, ...next }))}
-              onClear={() => setFilterState(DEFAULT_TASK_FILTERS)}
-              onClose={() => setFilterOpen(false)}
+              assignees={membersQuery.data ?? []}
+              onChange={(next) => setDraftFilterState((s) => ({ ...s, ...next }))}
+              onClear={() => setDraftFilterState(DEFAULT_TASK_FILTERS)}
+              onApply={applyFilters}
+              onClose={cancelFilters}
             />
           ) : null}
           {sortOpen ? (
             <SortPanel
-              state={sortState}
-              onChange={(next) => setSortState((s) => ({ ...s, ...next }))}
-              onClear={() => setSortState(DEFAULT_SORT)}
-              onClose={() => setSortOpen(false)}
+              state={draftSortState}
+              options={PROJECT_SORT_OPTIONS}
+              onChange={(next) => setDraftSortState((s) => ({ ...s, ...next }))}
+              onClear={() => setDraftSortState(DEFAULT_SORT)}
+              onApply={applySort}
+              onClose={cancelSort}
             />
           ) : null}
           {membersOpen ? (

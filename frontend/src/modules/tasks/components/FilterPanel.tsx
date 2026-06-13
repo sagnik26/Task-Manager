@@ -1,10 +1,12 @@
 import { Check, X } from "lucide-react";
+import { useMemo } from "react";
 
+import type { ProjectMember } from "../../../api/projects.api";
 import { PRIORITY_META, TASK_STATUS_COLUMNS } from "../../../shared/theme/design";
 import { Avatar } from "../../../shared/ui/Avatar";
 import type { Task, TaskPriority, TaskStatus } from "../../../types/tasks";
 
-const ASSIGNEE_OPTIONS = [
+const BASE_ASSIGNEE_OPTIONS = [
   { id: "me", name: "Me" },
   { id: "unassigned", name: "Unassigned" },
 ];
@@ -29,17 +31,28 @@ export function FilterPanel({
   tasks,
   state,
   currentUserId,
+  assignees = [],
   onChange,
   onClear,
+  onApply,
   onClose,
 }: {
   tasks: Task[];
   state: TaskFilterState;
   currentUserId: string;
+  assignees?: ProjectMember[];
   onChange: (next: Partial<TaskFilterState>) => void;
   onClear: () => void;
+  onApply: () => void;
   onClose: () => void;
 }) {
+  const assigneeOptions = useMemo(() => {
+    const memberOptions = assignees
+      .filter((member) => member.userId !== currentUserId)
+      .map((member) => ({ id: member.userId, name: member.name }));
+
+    return [...BASE_ASSIGNEE_OPTIONS, ...memberOptions];
+  }, [assignees, currentUserId]);
   function toggleStatus(id: TaskStatus) {
     const checked = state.filterStatus.includes(id);
     onChange({
@@ -78,7 +91,7 @@ export function FilterPanel({
   function countByAssignee(id: string) {
     if (id === "me") return tasks.filter((t) => t.assigneeId === currentUserId).length;
     if (id === "unassigned") return tasks.filter((t) => !t.assigneeId).length;
-    return 0;
+    return tasks.filter((t) => t.assigneeId === id).length;
   }
 
   return (
@@ -148,7 +161,7 @@ export function FilterPanel({
         <div className="filter-section">
           <h4 className="filter-section__label">Assignee</h4>
           <div className="filter-options" style={{ gap: 3 }}>
-            {ASSIGNEE_OPTIONS.map((a) => {
+            {assigneeOptions.map((a) => {
               const checked = state.filterAssignee.includes(a.id);
               return (
                 <button
@@ -203,7 +216,7 @@ export function FilterPanel({
           type="button"
           className="btn btn-primary btn-primary--md"
           style={{ width: "100%" }}
-          onClick={onClose}
+          onClick={onApply}
         >
           Apply filters
         </button>

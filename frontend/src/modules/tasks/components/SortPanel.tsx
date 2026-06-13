@@ -1,6 +1,9 @@
 import { Check, X } from "lucide-react";
 
-import { SORT_OPTIONS, type SortField } from "../../../shared/theme/design";
+import {
+  SORT_OPTIONS,
+  type SortField,
+} from "../../../shared/theme/design";
 
 export type SortState = {
   sortBy: SortField;
@@ -14,13 +17,17 @@ export const DEFAULT_SORT: SortState = {
 
 export function SortPanel({
   state,
+  options = SORT_OPTIONS,
   onChange,
   onClear,
+  onApply,
   onClose,
 }: {
   state: SortState;
+  options?: Array<{ id: SortField; label: string }>;
   onChange: (next: Partial<SortState>) => void;
   onClear: () => void;
+  onApply: () => void;
   onClose: () => void;
 }) {
   const isDefault =
@@ -46,7 +53,7 @@ export function SortPanel({
         <div className="filter-section" style={{ marginBottom: 4 }}>
           <h4 className="filter-section__label">Sort by</h4>
           <div className="filter-options">
-            {SORT_OPTIONS.map((opt) => {
+            {options.map((opt) => {
               const active = state.sortBy === opt.id;
               return (
                 <button
@@ -93,7 +100,7 @@ export function SortPanel({
           type="button"
           className="btn btn-primary btn-primary--md"
           style={{ width: "100%" }}
-          onClick={onClose}
+          onClick={onApply}
         >
           Apply sort
         </button>

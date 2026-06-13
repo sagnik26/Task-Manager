@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { toApiError } from "../../../shared/utils/apiErrors";
 import { TASK_STATUS_COLUMNS, PRIORITY_META } from "../../../shared/theme/design";
 import { taskUpsertSchema } from "../task.schemas";
+import type { ProjectMember } from "../../../api/projects.api";
 import type { Task, TaskPriority, TaskStatus } from "../../../types/tasks";
 
 type TaskDraft = {
@@ -31,6 +32,7 @@ export function TaskModal({
   mode,
   task,
   currentUserId,
+  assignees,
   defaultStatus,
   onClose,
   onSave,
@@ -40,6 +42,7 @@ export function TaskModal({
   mode: "create" | "edit";
   task?: Task | null;
   currentUserId: string;
+  assignees: ProjectMember[];
   defaultStatus?: TaskStatus;
   onClose: () => void;
   onSave: (next: Omit<Task, "id">, existingId?: string) => Promise<void> | void;
@@ -63,6 +66,23 @@ export function TaskModal({
     () => draft.title.trim().length > 0 && !submitting,
     [draft.title, submitting],
   );
+
+  const assigneeOptions = useMemo(() => {
+    const options = [...assignees];
+    if (
+      task?.assigneeId &&
+      !options.some((member) => member.userId === task.assigneeId)
+    ) {
+      options.push({
+        userId: task.assigneeId,
+        name: "Former member",
+        email: "",
+        role: "developer",
+        joinedAt: "",
+      });
+    }
+    return options;
+  }, [assignees, task?.assigneeId]);
 
   if (!open) return null;
 
@@ -272,7 +292,13 @@ export function TaskModal({
                 }
               >
                 <option value="">Unassigned</option>
-                <option value={currentUserId}>Me</option>
+                {assigneeOptions.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.userId === currentUserId
+                      ? `${member.name} (Me)`
+                      : member.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

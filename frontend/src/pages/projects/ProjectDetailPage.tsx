@@ -4,13 +4,17 @@ import {
   ChevronRight,
   Filter,
   Plus,
+  Trash2,
+  Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../modules/auth/context/useAuth.ts";
-import { getProject, listProjects } from "../../api/projects.api";
+import { ProjectMembersPanel } from "../../modules/projects/components/ProjectMembersPanel";
+import { getProject, deleteProject, listProjectMembers, listProjects } from "../../api/projects.api";
+import { Can } from "../../shared/permissions/Can";
 import {
   createTask,
   deleteTask,
@@ -62,8 +66,15 @@ export function ProjectDetailPage() {
     enabled: Boolean(projectId),
   });
 
+  const membersQuery = useQuery({
+    queryKey: ["project-members", projectId],
+    queryFn: () => listProjectMembers(projectId),
+    enabled: Boolean(projectId),
+  });
+
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
   const [filterState, setFilterState] = useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT);
 
@@ -72,6 +83,7 @@ export function ProjectDetailPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
   const [tasksActionError, setTasksActionError] = useState<string | null>(null);
+  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(null);
 
   const tasks = useMemo(() => (tasksQuery.data ?? []) as Task[], [tasksQuery.data]);
 
@@ -198,6 +210,17 @@ export function ProjectDetailPage() {
     },
   });
 
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => deleteProject(projectId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      navigate("/projects");
+    },
+    onError: (error) => {
+      setDeleteProjectError(toApiError(error).message);
+    },
+  });
+
   if (projectQuery.isLoading) {
     return <LoadingState label="Loading project…" />;
   }
@@ -250,6 +273,15 @@ export function ProjectDetailPage() {
     setTaskModalOpen(true);
   }
 
+  function handleDeleteProject() {
+    const ok = window.confirm(
+      `Delete "${project!.name}"? All tasks in this project will be permanently removed.`,
+    );
+    if (!ok) return;
+    setDeleteProjectError(null);
+    deleteProjectMutation.mutate();
+  }
+
   return (
     <>
       <div className="board-view" style={{ flex: 1, minHeight: 0 }}>
@@ -291,7 +323,39 @@ export function ProjectDetailPage() {
             <ArrowUpDown size={13} />
             Sort
           </button>
+          <Can permission="manageProjectMembers">
+            <button
+              type="button"
+              className={`toolbar-btn${membersOpen ? " toolbar-btn--active" : ""}`}
+              onClick={() => {
+                setMembersOpen(true);
+                setFilterOpen(false);
+                setSortOpen(false);
+              }}
+            >
+              <Users size={13} />
+              Members
+            </button>
+          </Can>
+          <Can permission="deleteProject">
+            <button
+              type="button"
+              className="toolbar-btn toolbar-btn--danger"
+              onClick={handleDeleteProject}
+              disabled={deleteProjectMutation.isPending}
+              aria-label="Delete project"
+            >
+              <Trash2 size={13} />
+              Delete project
+            </button>
+          </Can>
         </div>
+
+        {deleteProjectError ? (
+          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
+            {deleteProjectError}
+          </div>
+        ) : null}
 
         {tasksActionError ? (
           <div className="alert-error" style={{ margin: "8px 24px 0" }}>
@@ -358,6 +422,12 @@ export function ProjectDetailPage() {
               onClose={() => setSortOpen(false)}
             />
           ) : null}
+          {membersOpen ? (
+            <ProjectMembersPanel
+              projectId={projectId}
+              onClose={() => setMembersOpen(false)}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -366,6 +436,7 @@ export function ProjectDetailPage() {
         mode={taskModalMode}
         task={editingTask}
         currentUserId={currentUserId}
+        assignees={membersQuery.data ?? []}
         defaultStatus={defaultStatus}
         onClose={() => setTaskModalOpen(false)}
         onSave={handleSaveTask}

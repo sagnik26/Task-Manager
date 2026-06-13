@@ -42,7 +42,89 @@ The backend is a **modular monolith**: one deployable Node app, but each busines
 
 ---
 
-## 3. Running Locally
+## 3. Database schema
+
+TaskFlow uses a **multitenant** PostgreSQL schema. All users and projects belong to a **tenant**. Project access is granted through **`project_members`** (not a single owner). Users have a **role** within their tenant: `admin` or `developer`.
+
+```mermaid
+erDiagram
+  TENANTS {
+    uuid id PK
+    string name
+    string slug
+    timestamp created_at
+  }
+  USERS {
+    uuid id PK
+    uuid tenant_id FK
+    string name
+    string email
+    string password_hash
+    enum role "admin | developer"
+    boolean is_active
+    timestamp created_at
+  }
+  PROJECTS {
+    uuid id PK
+    uuid tenant_id FK
+    string name
+    string description
+    enum status "active | archived"
+    timestamp created_at
+  }
+  PROJECT_MEMBERS {
+    uuid id PK
+    uuid project_id FK
+    uuid user_id FK
+    timestamp joined_at
+  }
+  TASKS {
+    uuid id PK
+    uuid project_id FK
+    uuid assignee_id FK
+    uuid created_by FK
+    string title
+    string description
+    enum status "todo | in_progress | done"
+    enum priority "low | medium | high"
+    date due_date
+    timestamp created_at
+  }
+  TENANTS ||--o{ USERS : has
+  TENANTS ||--o{ PROJECTS : owns
+  PROJECTS ||--o{ PROJECT_MEMBERS : includes
+  USERS ||--o{ PROJECT_MEMBERS : joins
+  PROJECTS ||--o{ TASKS : contains
+  USERS ||--o{ TASKS : assigned_to
+```
+
+### Relationships
+
+- A **tenant** has many users and many projects.
+- A **user** belongs to one tenant; email is unique per tenant (`tenant_id` + `email`).
+- A **project** belongs to one tenant and has many members via `project_members`.
+- **Tasks** belong to a project; `assignee_id` and `created_by` reference users.
+
+### Access rules
+
+| Role | Project visibility | Project mutations | User management |
+| ---- | ---------------- | ----------------- | --------------- |
+| **admin** | All projects in tenant | Create, update, delete any tenant project | List users, change roles, toggle `is_active`, manage project members |
+| **developer** | Only projects where listed in `project_members` | Update/delete only if a member (delete project: admin only) | None |
+
+### Registration
+
+New users **auto-join** the default tenant (`slug: taskflow`). They are created with role `developer` and `is_active = true`.
+
+### Schema notes
+
+- `users.password` was renamed to `password_hash`.
+- `projects.owner_id` was removed; the creator is inserted into `project_members`.
+- `tasks.updated_at` is retained for API compatibility (not shown in the diagram).
+
+---
+
+## 4. Running Locally
 
 - Install **Docker** in local machine.
 
@@ -103,7 +185,7 @@ npm run dev          # http://localhost:5173 — Vite proxies /api → localhost
 
 ---
 
-## 4. Environment variables
+## 5. Environment variables
 
 Copy `backend/.env.example` to `backend/.env` and set at least **JWT_SECRET**.
 
@@ -135,7 +217,7 @@ Copy `backend/.env.example` to `backend/.env` and set at least **JWT_SECRET**.
 
 ---
 
-## 5. Running Migrations
+## 6. Running Migrations
 
 Migrations run **automatically** when the backend container starts (`backend/scripts/entrypoint.sh` runs `npm run migrate` before the server).
 
@@ -152,7 +234,7 @@ Rollback (when needed): `npm run migrate:down` from `backend/`.
 
 ---
 
-## 6. Test Credentials
+## 7. Test Credentials
 
 After seed runs (`RUN_SEED=1` in Docker by default), log in without registering:
 
@@ -160,12 +242,14 @@ After seed runs (`RUN_SEED=1` in Docker by default), log in without registering:
 | ------------ | ------------------ |
 | **Email**    | `test@example.com` |
 | **Password** | `password123`      |
+| **Tenant**   | `taskflow` (default) |
+| **Role**     | `admin`            |
 
 **Note:** Password rules are configurable via `PASSWORD_*` env vars; `backend/.env.example` uses a demo-friendly policy so the seed password works for registration too.
 
 ---
 
-## 7. API Reference
+## 8. API Reference
 
 **Base URL:** `http://localhost:4000`
 
@@ -247,14 +331,25 @@ Most successful JSON responses use:
 
 ### Projects
 
-| Method | Path                  | Auth | Description                           |
-| ------ | --------------------- | ---- | ------------------------------------- |
-| GET    | `/projects`           | Yes  | List projects the user can access     |
-| POST   | `/projects`           | Yes  | Create project (current user = owner) |
-| GET    | `/projects/:id`       | Yes  | Project detail including tasks        |
-| GET    | `/projects/:id/stats` | Yes  | Task counts by status and by assignee |
-| PATCH  | `/projects/:id`       | Yes  | Update name/description (owner only)  |
-| DELETE | `/projects/:id`       | Yes  | Delete project and tasks (owner only) |
+| Method | Path                  | Auth  | Description                                      |
+| ------ | --------------------- | ----- | ------------------------------------------------ |
+| GET    | `/projects`           | Yes   | List projects (admin: all in tenant; developer: member projects) |
+| POST   | `/projects`           | Yes   | Create project; creator added to `project_members` |
+| GET    | `/projects/:id`       | Yes   | Project detail including tasks                   |
+| GET    | `/projects/:id/stats` | Yes   | Task counts by status and by assignee            |
+| PATCH  | `/projects/:id`       | Yes   | Update name/description/status (admin or member) |
+| DELETE | `/projects/:id`       | Yes   | Delete project and tasks (**admin** only)        |
+| POST   | `/projects/:id/members` | Admin | Add user to project (`user_id` in body)        |
+| DELETE | `/projects/:id/members/:userId` | Admin | Remove user from project              |
+
+---
+
+### Users (admin)
+
+| Method | Path           | Auth  | Description                                |
+| ------ | -------------- | ----- | ------------------------------------------ |
+| GET    | `/users`       | Admin | List users in the caller's tenant          |
+| PATCH  | `/users/:id`   | Admin | Update `role` and/or `is_active`           |
 
 ---
 
@@ -265,14 +360,14 @@ Most successful JSON responses use:
 | GET    | `/projects/:id/tasks` | Yes  | List tasks; query: `?status=`, `?assignee=<uuid>`       |
 | POST   | `/projects/:id/tasks` | Yes  | Create task in project                                  |
 | PATCH  | `/tasks/:id`          | Yes  | Update task fields                                      |
-| DELETE | `/tasks/:id`          | Yes  | Delete task (allowed for project owner or task creator) |
+| DELETE | `/tasks/:id`          | Yes  | Delete task (admin, or member who created it)        |
 
 **Task `status`:** `todo` | `in_progress` | `done`  
 **Task `priority`:** `low` | `medium` | `high`
 
 ---
 
-## 8. What I’d Do With More Time
+## 9. What I’d Do With More Time
 
 - **Tests:** Integration tests for auth, projects, and tasks.
 - **Pagination:** `?page` / `?limit` on list endpoints like projects & tasks.

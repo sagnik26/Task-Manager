@@ -9,6 +9,7 @@ import { swaggerDocsMiddleware } from "./shared/swagger/swaggerDocs";
 import authRouter from "./modules/auth/routes/auth.routes";
 import projectsRouter from "./modules/projects/routes/projects.routes";
 import tasksRouter from "./modules/tasks/routes/tasks.routes";
+import usersRouter from "./modules/users/routes/users.routes";
 import ResponseFormatter from "./shared/utils/responseFormatter";
 
 const app = express();
@@ -42,6 +43,7 @@ app.use("/api-docs", ...swaggerDocsMiddleware);
 
 app.use("/auth", authRouter);
 app.use("/projects", projectsRouter);
+app.use("/users", usersRouter);
 app.use(tasksRouter);
 
 app.use((_req, res) => {

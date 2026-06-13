@@ -1,8 +1,9 @@
-import { CheckSquare, Home, Plus } from "lucide-react";
+import { CheckSquare, Home, Plus, Users } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { listProjects } from "../../api/projects.api";
+import { Can } from "../permissions/Can";
 import { projectVisuals } from "../theme/design";
 
 export function Sidebar({
@@ -17,7 +18,10 @@ export function Sidebar({
   });
 
   const projects = projectsQuery.data ?? [];
-  const isDashboard = location.pathname === "/projects" || location.pathname === "/dashboard";
+  const isDashboard =
+    location.pathname === "/projects" || location.pathname === "/dashboard";
+  const isUsers = location.pathname === "/users";
+  const isMyTasks = location.pathname === "/my-tasks";
 
   return (
     <aside className="sidebar">
@@ -29,10 +33,22 @@ export function Sidebar({
           <Home size={15} />
           Dashboard
         </NavLink>
-        <button type="button" className="sidebar-nav-item">
+        <Can permission="manageUsers">
+          <NavLink
+            to="/users"
+            className={`sidebar-nav-item${isUsers ? " sidebar-nav-item--active" : ""}`}
+          >
+            <Users size={15} />
+            Users
+          </NavLink>
+        </Can>
+        <NavLink
+          to="/my-tasks"
+          className={`sidebar-nav-item${isMyTasks ? " sidebar-nav-item--active" : ""}`}
+        >
           <CheckSquare size={15} />
           My tasks
-        </button>
+        </NavLink>
       </div>
 
       <div className="sidebar__divider" />
@@ -40,15 +56,17 @@ export function Sidebar({
       <div className="sidebar__projects">
         <div className="sidebar__section-header">
           <span className="sidebar__section-label">Projects</span>
-          <button
-            type="button"
-            className="icon-btn icon-btn--sm"
-            style={{ width: 20, height: 20, color: "var(--blue)" }}
-            onClick={onNewProject}
-            aria-label="New project"
-          >
-            <Plus size={13} strokeWidth={2.5} />
-          </button>
+          <Can permission="createProject">
+            <button
+              type="button"
+              className="icon-btn icon-btn--sm"
+              style={{ width: 20, height: 20, color: "var(--blue)" }}
+              onClick={onNewProject}
+              aria-label="New project"
+            >
+              <Plus size={13} strokeWidth={2.5} />
+            </button>
+          </Can>
         </div>
 
         {projects.map((project, index) => {
@@ -69,15 +87,17 @@ export function Sidebar({
           );
         })}
 
-        <button
-          type="button"
-          className="sidebar-project-item"
-          style={{ color: "var(--blue)", fontWeight: 500, marginTop: 4 }}
-          onClick={onNewProject}
-        >
-          <Plus size={13} strokeWidth={2.5} />
-          New project
-        </button>
+        <Can permission="createProject">
+          <button
+            type="button"
+            className="sidebar-project-item"
+            style={{ color: "var(--blue)", fontWeight: 500, marginTop: 4 }}
+            onClick={onNewProject}
+          >
+            <Plus size={13} strokeWidth={2.5} />
+            New project
+          </button>
+        </Can>
       </div>
     </aside>
   );

@@ -87,6 +87,7 @@ export const openApiDocument = {
     { name: "Auth" },
     { name: "Projects" },
     { name: "Tasks" },
+    { name: "Users" },
   ],
   components: {
     securitySchemes: {
@@ -124,6 +125,9 @@ export const openApiDocument = {
               id: uuid,
               name: { type: "string" },
               email: { type: "string", format: "email" },
+              tenantId: uuid,
+              role: { type: "string", enum: ["admin", "developer"] },
+              isActive: { type: "boolean" },
             },
           },
         },
@@ -134,6 +138,35 @@ export const openApiDocument = {
           id: uuid,
           name: { type: "string" },
           email: { type: "string", format: "email" },
+          tenantId: uuid,
+          role: { type: "string", enum: ["admin", "developer"] },
+          isActive: { type: "boolean" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      PermissionFlags: {
+        type: "object",
+        properties: {
+          role: { type: "string", enum: ["admin", "developer"], nullable: true },
+          permissions: {
+            type: "array",
+            items: { type: "string" },
+          },
+          can: {
+            type: "object",
+            properties: {
+              createProject: { type: "boolean" },
+              deleteProject: { type: "boolean" },
+              updateProject: { type: "boolean" },
+              viewProject: { type: "boolean" },
+              manageProjectMembers: { type: "boolean" },
+              manageUsers: { type: "boolean" },
+              createTask: { type: "boolean" },
+              updateTask: { type: "boolean" },
+              viewTask: { type: "boolean" },
+              deleteTask: { type: "boolean" },
+            },
+          },
         },
       },
       CreateProjectRequest: {
@@ -149,8 +182,24 @@ export const openApiDocument = {
         properties: {
           name: { type: "string" },
           description: { type: "string", nullable: true },
+          status: { type: "string", enum: ["active", "archived"] },
         },
-        description: "At least one of `name` or `description` is required.",
+        description: "At least one of `name`, `description`, or `status` is required.",
+      },
+      AddProjectMemberRequest: {
+        type: "object",
+        required: ["user_id"],
+        properties: {
+          user_id: uuid,
+        },
+      },
+      UpdateUserRequest: {
+        type: "object",
+        properties: {
+          role: { type: "string", enum: ["admin", "developer"] },
+          is_active: { type: "boolean" },
+        },
+        description: "At least one of `role` or `is_active` is required.",
       },
       CreateTaskRequest: {
         type: "object",
@@ -353,10 +402,38 @@ export const openApiDocument = {
         },
       },
     },
+    "/auth/permissions": {
+      get: {
+        tags: ["Auth"],
+        summary: "Current user permissions",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  allOf: [
+                    successEnvelope,
+                    {
+                      type: "object",
+                      properties: {
+                        data: { $ref: "#/components/schemas/PermissionFlags" },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": unauthorized,
+        },
+      },
+    },
     "/projects": {
       get: {
         tags: ["Projects"],
-        summary: "List projects the user can access",
+        summary: "List projects (admin: all in tenant; developer: member projects)",
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -401,6 +478,7 @@ export const openApiDocument = {
           },
           "400": validationError,
           "401": unauthorized,
+          "403": forbidden,
         },
       },
     },
@@ -461,7 +539,7 @@ export const openApiDocument = {
       },
       patch: {
         tags: ["Projects"],
-        summary: "Update project (owner only)",
+        summary: "Update project (admin or member)",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -496,7 +574,7 @@ export const openApiDocument = {
       },
       delete: {
         tags: ["Projects"],
-        summary: "Delete project and tasks (owner only)",
+        summary: "Delete project and tasks (admin only)",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -515,6 +593,167 @@ export const openApiDocument = {
               },
             },
           },
+          "401": unauthorized,
+          "403": forbidden,
+          "404": notFound,
+        },
+      },
+    },
+    "/projects/{id}/members": {
+      get: {
+        tags: ["Projects"],
+        summary: "List project members",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: uuid,
+          },
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: { allOf: [successEnvelope] },
+              },
+            },
+          },
+          "401": unauthorized,
+          "403": forbidden,
+          "404": notFound,
+        },
+      },
+      post: {
+        tags: ["Projects"],
+        summary: "Add a user to a project (admin only)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: uuid,
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AddProjectMemberRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Created",
+            content: {
+              "application/json": {
+                schema: { allOf: [successEnvelope] },
+              },
+            },
+          },
+          "400": validationError,
+          "401": unauthorized,
+          "403": forbidden,
+          "404": notFound,
+        },
+      },
+    },
+    "/projects/{id}/members/{userId}": {
+      delete: {
+        tags: ["Projects"],
+        summary: "Remove a user from a project (admin only)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: uuid,
+          },
+          {
+            name: "userId",
+            in: "path",
+            required: true,
+            schema: uuid,
+          },
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: { allOf: [successEnvelope] },
+              },
+            },
+          },
+          "401": unauthorized,
+          "403": forbidden,
+          "404": notFound,
+        },
+      },
+    },
+    "/users": {
+      get: {
+        tags: ["Users"],
+        summary: "List users in the caller's tenant (admin only)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  allOf: [
+                    successEnvelope,
+                    {
+                      type: "object",
+                      properties: { data: { type: "array", items: {} } },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": unauthorized,
+          "403": forbidden,
+        },
+      },
+    },
+    "/users/{id}": {
+      patch: {
+        tags: ["Users"],
+        summary: "Update user role or active status (admin only)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: uuid,
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateUserRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: { allOf: [successEnvelope] },
+              },
+            },
+          },
+          "400": validationError,
           "401": unauthorized,
           "403": forbidden,
           "404": notFound,
@@ -647,7 +886,7 @@ export const openApiDocument = {
       },
       delete: {
         tags: ["Tasks"],
-        summary: "Delete a task (project owner or creator)",
+        summary: "Delete a task (admin or member who created it)",
         security: [{ bearerAuth: [] }],
         parameters: [
           {

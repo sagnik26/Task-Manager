@@ -8,11 +8,18 @@ import { toApiError } from "../../../shared/utils/apiErrors";
 
 export function AuthContextProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
+  const permissions = useAuthStore((s) => s.permissions);
   const setUser = useAuthStore((s) => s.setUser);
+  const setPermissions = useAuthStore((s) => s.setPermissions);
   const clear = useAuthStore((s) => s.clear);
 
   const [isBootstrapped, setIsBootstrapped] = useState(false);
   const bootstrapRunningRef = useRef(false);
+
+  const loadPermissions = useCallback(async () => {
+    const nextPermissions = await authApi.getPermissions();
+    setPermissions(nextPermissions);
+  }, [setPermissions]);
 
   const bootstrap = useCallback(async () => {
     if (bootstrapRunningRef.current) return;
@@ -20,9 +27,9 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await authApi.getProfile();
       setUser(profile);
+      await loadPermissions();
     } catch (err) {
       const apiError = toApiError(err);
-      // If the cookie is missing/expired, treat as logged out.
       if (apiError.kind === "unauthorized") {
         clear();
       }
@@ -30,7 +37,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       setIsBootstrapped(true);
       bootstrapRunningRef.current = false;
     }
-  }, [clear, setUser]);
+  }, [clear, loadPermissions, setUser]);
 
   const login = useCallback(
     async (input: LoginInput) => {
@@ -40,8 +47,9 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       }
       const nextUser = await authApi.login({ email, password });
       setUser(nextUser);
+      await loadPermissions();
     },
-    [setUser],
+    [loadPermissions, setUser],
   );
 
   const register = useCallback(
@@ -56,8 +64,9 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       }
       const nextUser = await authApi.register({ name, email, password });
       setUser(nextUser);
+      await loadPermissions();
     },
-    [setUser],
+    [loadPermissions, setUser],
   );
 
   const logout = useCallback(async () => {
@@ -71,6 +80,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      permissions,
       isAuthenticated: Boolean(user),
       isBootstrapped,
       bootstrap,
@@ -78,9 +88,8 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       register,
       logout,
     }),
-    [bootstrap, isBootstrapped, login, logout, register, user],
+    [bootstrap, isBootstrapped, login, logout, permissions, register, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-

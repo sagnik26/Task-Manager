@@ -274,6 +274,15 @@ textarea {
   border-radius: 6px;
 }
 
+.icon-btn--danger {
+  color: #c4222d;
+}
+
+.icon-btn--danger:hover {
+  background: rgba(196, 34, 45, 0.08);
+  color: #a01b24;
+}
+
 .icon-btn--auth {
   width: 36px;
   height: 36px;
@@ -540,6 +549,198 @@ textarea {
   background: var(--danger);
   border-radius: 50%;
   border: 2px solid var(--header-bg);
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-menu__trigger {
+  display: flex;
+}
+
+.profile-menu__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 8px;
+  z-index: 30;
+}
+
+.profile-menu__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+}
+
+.profile-menu__meta {
+  min-width: 0;
+}
+
+.profile-menu__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-menu__email {
+  font-size: 12px;
+  color: var(--secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-menu__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.profile-menu__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-menu__item:hover {
+  background: var(--surface-alt);
+  color: var(--danger);
+}
+
+.users-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.users-table th,
+.users-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.users-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  background: var(--surface-alt);
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.users-table__name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.users-badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.users-badge--admin {
+  background: rgba(0, 115, 234, 0.12);
+  color: var(--blue);
+}
+
+.users-badge--developer {
+  background: var(--surface-alt);
+  color: var(--secondary);
+}
+
+.users-badge--active {
+  background: rgba(0, 200, 117, 0.12);
+  color: #00854d;
+}
+
+.users-badge--inactive {
+  background: rgba(223, 47, 74, 0.1);
+  color: var(--danger);
+}
+
+.users-table-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.users-table-empty p {
+  margin: 8px 0 0;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.members-list__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
+.members-list__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.members-list__name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.members-list__email {
+  display: block;
+  font-size: 11px;
+  color: var(--secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-body {
@@ -1043,6 +1244,42 @@ textarea {
   color: var(--blue);
   border-color: var(--blue);
   font-weight: 600;
+}
+
+.toolbar-btn--danger {
+  color: #c4222d;
+  border-color: rgba(196, 34, 45, 0.25);
+}
+
+.toolbar-btn--danger:hover {
+  background: rgba(196, 34, 45, 0.08);
+  color: #a01b24;
+}
+
+.my-tasks-table__row {
+  cursor: pointer;
+}
+
+.my-tasks-table__row:hover td {
+  background: var(--surface-alt);
+}
+
+.my-tasks-table__title {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.my-tasks-table__status {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.my-tasks-table__due {
+  color: var(--secondary);
+  white-space: nowrap;
 }
 
 .kanban-area {

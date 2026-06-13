@@ -4,13 +4,16 @@ import {
   Clock,
   LayoutList,
   Plus,
+  Trash2,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getProjectStats, listProjects } from "../../api/projects.api";
+import { deleteProject, getProjectStats, listProjects } from "../../api/projects.api";
 import { useAuth } from "../../modules/auth/context/useAuth";
+import { Can } from "../../shared/permissions/Can";
+import { useCan } from "../../shared/permissions/usePermission";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { LoadingState } from "../../shared/ui/LoadingState";
@@ -34,8 +37,31 @@ type ProjectWithStats = Project & {
 
 export function ProjectsListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { openNewProject } = useOutletContext<AppShellContext>();
   const { user } = useAuth();
+  const canCreateProject = useCan("createProject");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (projectId: string) => deleteProject(projectId),
+    onSuccess: async () => {
+      setDeleteError(null);
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (error) => {
+      setDeleteError(toApiError(error).message);
+    },
+  });
+
+  function handleDeleteProject(project: Project, event: MouseEvent) {
+    event.stopPropagation();
+    const ok = window.confirm(
+      `Delete "${project.name}"? All tasks in this project will be permanently removed.`,
+    );
+    if (!ok) return;
+    deleteProjectMutation.mutate(project.id);
+  }
 
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -128,14 +154,16 @@ export function ProjectsListPage() {
             <span style={{ color: "var(--secondary)", fontWeight: 600 }}>{totals.todo}</span> to do
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-primary--md"
-          onClick={openNewProject}
-        >
-          <Plus size={13} strokeWidth={2.5} />
-          New project
-        </button>
+        <Can permission="createProject">
+          <button
+            type="button"
+            className="btn btn-primary btn-primary--md"
+            onClick={openNewProject}
+          >
+            <Plus size={13} strokeWidth={2.5} />
+            New project
+          </button>
+        </Can>
       </div>
 
       <div className="stats-grid">
@@ -205,12 +233,22 @@ export function ProjectsListPage() {
         All projects
       </h2>
 
+      {deleteError ? (
+        <div className="alert-error" style={{ marginBottom: 12 }}>
+          {deleteError}
+        </div>
+      ) : null}
+
       {enriched.length === 0 ? (
         <EmptyState
           title="No projects yet"
-          description="Create your first project to start tracking tasks."
-          actionLabel="Create project"
-          onAction={openNewProject}
+          description={
+            canCreateProject
+              ? "Create your first project to start tracking tasks."
+              : "You have not been added to any projects yet."
+          }
+          actionLabel={canCreateProject ? "Create project" : undefined}
+          onAction={canCreateProject ? openNewProject : undefined}
         />
       ) : (
         <div className="project-grid">
@@ -245,14 +283,17 @@ export function ProjectsListPage() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="icon-btn icon-btn--sm"
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label="Project menu"
-                  >
-                    ⋯
-                  </button>
+                  <Can permission="deleteProject">
+                    <button
+                      type="button"
+                      className="icon-btn icon-btn--sm icon-btn--danger"
+                      onClick={(e) => handleDeleteProject(project, e)}
+                      disabled={deleteProjectMutation.isPending}
+                      aria-label={`Delete ${project.name}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </Can>
                 </div>
 
                 <div className="progress-section">

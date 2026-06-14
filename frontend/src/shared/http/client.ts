@@ -5,11 +5,11 @@ import { useAuthStore } from "../../store";
 /**
  * Axios instance for TaskFlow API.
  *
- * - `baseURL: "/api"` so the frontend nginx can reverse-proxy to the backend in Docker.
+ * - `VITE_API_URL` defaults to `/api` (nginx or Netlify proxy to backend).
  * - `withCredentials: true` so the HttpOnly auth cookie is sent automatically.
  */
 export const apiClient = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
 });
 

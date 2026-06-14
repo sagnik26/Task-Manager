@@ -8,6 +8,14 @@ export type Task = {
   status: TaskStatus;
   priority: TaskPriority;
   assigneeId: string | null;
+  projectId?: string;
   dueDate: string | null; // ISO date (YYYY-MM-DD) for UI simplicity
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type AssignedTask = Task & {
+  projectId: string;
+  projectName: string;
 };
 

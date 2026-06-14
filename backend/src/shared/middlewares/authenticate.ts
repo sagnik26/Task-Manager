@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
+import type { UserRole } from "../constants/users";
 import config from "../config/index";
 import logger from "../config/logger";
 
@@ -9,6 +10,8 @@ declare module "express-serve-static-core" {
     user?: {
       userId: string;
       email: string;
+      tenantId: string;
+      role: UserRole;
     };
   }
 }
@@ -16,6 +19,8 @@ declare module "express-serve-static-core" {
 interface AccessTokenPayload extends jwt.JwtPayload {
   user_id: string;
   email: string;
+  tenant_id: string;
+  role: UserRole;
 }
 
 function isAccessTokenPayload(
@@ -25,7 +30,9 @@ function isAccessTokenPayload(
     typeof decoded === "object" &&
     decoded !== null &&
     typeof (decoded as AccessTokenPayload).user_id === "string" &&
-    typeof (decoded as AccessTokenPayload).email === "string"
+    typeof (decoded as AccessTokenPayload).email === "string" &&
+    typeof (decoded as AccessTokenPayload).tenant_id === "string" &&
+    typeof (decoded as AccessTokenPayload).role === "string"
   );
 }
 
@@ -74,6 +81,8 @@ const authenticate = (
     req.user = {
       userId: decoded.user_id,
       email: decoded.email,
+      tenantId: decoded.tenant_id,
+      role: decoded.role,
     };
 
     next();

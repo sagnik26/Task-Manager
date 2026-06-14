@@ -22,7 +22,10 @@ export abstract class BaseRepository {
     return this.pool.query<R>(text, params);
   }
 
-  abstract findByEmail(email: string): Promise<UserRow | null>;
+  abstract findTenantIdBySlug(slug: string): Promise<string | null>;
+  abstract findByEmail(
+    email: string,
+    tenantId: string,
+  ): Promise<UserRow | null>;
   abstract create(data: CreateUserInput): Promise<PublicUser>;
 }
-

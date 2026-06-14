@@ -1,4 +1,3 @@
-import { Box, Button, Paper, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 
 export function EmptyState({
@@ -16,27 +15,20 @@ export function EmptyState({
 }) {
   const action =
     actionLabel && actionHref ? (
-      <Button component={RouterLink} to={actionHref} variant="contained">
+      <RouterLink to={actionHref} className="btn btn-primary btn-primary--md">
         {actionLabel}
-      </Button>
+      </RouterLink>
     ) : actionLabel && onAction ? (
-      <Button onClick={onAction} variant="contained">
+      <button type="button" className="btn btn-primary btn-primary--md" onClick={onAction}>
         {actionLabel}
-      </Button>
+      </button>
     ) : null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 4 }}>
-      <Box sx={{ display: "grid", gap: 1.5 }}>
-        <Typography variant="h6">{title}</Typography>
-        {description ? (
-          <Typography variant="body2" color="text.secondary">
-            {description}
-          </Typography>
-        ) : null}
-        {action ? <Box sx={{ pt: 1 }}>{action}</Box> : null}
-      </Box>
-    </Paper>
+    <div className="state-panel">
+      <h3 className="state-panel__title">{title}</h3>
+      {description ? <p className="state-panel__desc">{description}</p> : null}
+      {action}
+    </div>
   );
 }
-

@@ -3,6 +3,12 @@ import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 
 import config from "../../../shared/config";
 import logger from "../../../shared/config/logger";
+import { DEFAULT_TENANT_SLUG } from "../../../shared/constants/tenants";
+import type { UserRole } from "../../../shared/constants/users";
+import {
+  permissionFlags,
+  type PermissionFlags,
+} from "../../../shared/permissions/permissions";
 import { AppError } from "../../../shared/utils/AppError";
 import SecurityUtils from "../../../shared/utils/SecurityUtils";
 import { AuthRepository } from "../repositories/auth.repository";
@@ -22,6 +28,9 @@ export class AuthService {
       id: row.id,
       name: row.name,
       email: row.email,
+      tenantId: row.tenant_id,
+      role: row.role,
+      isActive: row.is_active,
     };
   }
 
@@ -30,7 +39,26 @@ export class AuthService {
     const options: SignOptions = {
       expiresIn: config.jwt.expiresIn as SignOptions["expiresIn"],
     };
-    return jwt.sign({ user_id: user.id, email: user.email }, secret, options);
+    return jwt.sign(
+      {
+        user_id: user.id,
+        email: user.email,
+        tenant_id: user.tenantId,
+        role: user.role,
+      },
+      secret,
+      options,
+    );
+  }
+
+  private async resolveDefaultTenantId(): Promise<string> {
+    const tenantId = await this.authRepository.findTenantIdBySlug(
+      DEFAULT_TENANT_SLUG,
+    );
+    if (!tenantId) {
+      throw new AppError("default tenant not configured", 500);
+    }
+    return tenantId;
   }
 
   async register(input: {
@@ -46,7 +74,8 @@ export class AuthService {
     }
 
     const email = input.email.trim().toLowerCase();
-    const existing = await this.authRepository.findByEmail(email);
+    const tenantId = await this.resolveDefaultTenantId();
+    const existing = await this.authRepository.findByEmail(email, tenantId);
     if (existing) {
       throw new AppError("Email already exists", 409);
     }
@@ -56,6 +85,7 @@ export class AuthService {
       name: input.name.trim(),
       email,
       hashedPassword,
+      tenantId,
     });
 
     const token = this.signToken(user);
@@ -63,6 +93,7 @@ export class AuthService {
       userId: user.id,
       name: user.name,
       email: user.email,
+      tenantId: user.tenantId,
     });
 
     return { token, user };
@@ -73,12 +104,17 @@ export class AuthService {
     password: string,
   ): Promise<{ token: string; user: PublicUser }> {
     const normalizedEmail = email.trim().toLowerCase();
-    const row = await this.authRepository.findByEmail(normalizedEmail);
+    const tenantId = await this.resolveDefaultTenantId();
+    const row = await this.authRepository.findByEmail(normalizedEmail, tenantId);
     if (!row) {
       throw new AppError("Invalid credentials", 401);
     }
 
-    const valid = await bcrypt.compare(password, row.password);
+    if (!row.is_active) {
+      throw new AppError("account is inactive", 403);
+    }
+
+    const valid = await bcrypt.compare(password, row.password_hash);
     if (!valid) {
       throw new AppError("Invalid credentials", 401);
     }
@@ -89,6 +125,7 @@ export class AuthService {
       userId: user.id,
       name: user.name,
       email: user.email,
+      tenantId: user.tenantId,
     });
 
     return { token, user };
@@ -100,5 +137,9 @@ export class AuthService {
       throw new AppError("not found", 404);
     }
     return profile;
+  }
+
+  getPermissions(role: UserRole): PermissionFlags {
+    return permissionFlags(role);
   }
 }

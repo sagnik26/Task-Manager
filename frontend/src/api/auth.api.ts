@@ -1,6 +1,6 @@
 import { apiClient } from "../shared/http/client";
 import { extractResponseData } from "../shared/utils/apiResponse";
-import type { User } from "../types";
+import type { PermissionFlags, User } from "../types";
 
 export type RegisterPayload = {
   name: string;
@@ -32,7 +32,11 @@ export async function getProfile(): Promise<User> {
   return extractResponseData<User>(res.data);
 }
 
+export async function getPermissions(): Promise<PermissionFlags> {
+  const res = await apiClient.get("/auth/permissions");
+  return extractResponseData<PermissionFlags>(res.data);
+}
+
 export async function logout(): Promise<void> {
   await apiClient.post("/auth/logout");
 }
-

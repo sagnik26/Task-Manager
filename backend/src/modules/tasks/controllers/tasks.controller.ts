@@ -31,8 +31,24 @@ export class TasksController {
     if (!tasksService) throw new Error("TasksService is required");
   }
 
+  private readAccessContext(req: Request) {
+    const userId = req.user?.userId;
+    const tenantId = req.user?.tenantId;
+    const role = req.user?.role;
+    if (!userId || !tenantId || !role) {
+      return null;
+    }
+    return { userId, tenantId, role };
+  }
+
   async listByProject(req: Request, res: Response, next: NextFunction) {
     try {
+      const ctx = this.readAccessContext(req);
+      if (!ctx) {
+        res.status(401).json({ error: "unauthorized" });
+        return;
+      }
+
       const projectId = String(req.params.id);
       const status = req.query.status;
       const assignee = req.query.assignee;
@@ -52,10 +68,14 @@ export class TasksController {
         throw new AppError("validation failed", 400, fields);
       }
 
-      const tasks = await this.tasksService.listProjectTasks(projectId, {
-        status: parsedStatus,
-        assigneeId: parsedAssignee,
-      });
+      const tasks = await this.tasksService.listProjectTasks(
+        projectId,
+        {
+          status: parsedStatus,
+          assigneeId: parsedAssignee,
+        },
+        ctx,
+      );
       res.status(200).json(ResponseFormatter.success(tasks, "Tasks fetched"));
     } catch (error) {
       next(error);
@@ -64,8 +84,8 @@ export class TasksController {
 
   async createForProject(req: Request, res: Response, next: NextFunction) {
     try {
-      const actorUserId = req.user?.userId;
-      if (!actorUserId) {
+      const ctx = this.readAccessContext(req);
+      if (!ctx) {
         res.status(401).json({ error: "unauthorized" });
         return;
       }
@@ -73,16 +93,19 @@ export class TasksController {
       const projectId = String(req.params.id);
       const body = req.body as CreateTaskBody;
 
-      const task = await this.tasksService.createTask({
-        projectId,
-        title: body.title,
-        description: body.description,
-        status: body.status,
-        priority: body.priority,
-        assigneeId: body.assignee_id,
-        dueDate: body.due_date,
-        createdBy: actorUserId,
-      });
+      const task = await this.tasksService.createTask(
+        {
+          projectId,
+          title: body.title,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          assigneeId: body.assignee_id,
+          dueDate: body.due_date,
+          createdBy: ctx.userId,
+        },
+        ctx,
+      );
 
       res
         .status(201)
@@ -94,18 +117,27 @@ export class TasksController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
+      const ctx = this.readAccessContext(req);
+      if (!ctx) {
+        res.status(401).json({ error: "unauthorized" });
+        return;
+      }
+
       const taskId = String(req.params.id);
       const body = req.body as UpdateTaskBody;
 
-      const task = await this.tasksService.updateTask({
-        taskId,
-        title: body.title,
-        description: body.description,
-        status: body.status,
-        priority: body.priority,
-        assigneeId: body.assignee_id,
-        dueDate: body.due_date,
-      });
+      const task = await this.tasksService.updateTask(
+        {
+          taskId,
+          title: body.title,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          assigneeId: body.assignee_id,
+          dueDate: body.due_date,
+        },
+        ctx,
+      );
 
       res.status(200).json(ResponseFormatter.success(task, "Task updated"));
     } catch (error) {
@@ -115,18 +147,17 @@ export class TasksController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const actorUserId = req.user?.userId;
-      if (!actorUserId) {
+      const ctx = this.readAccessContext(req);
+      if (!ctx) {
         res.status(401).json({ error: "unauthorized" });
         return;
       }
 
       const taskId = String(req.params.id);
-      await this.tasksService.deleteTask(taskId, actorUserId);
+      await this.tasksService.deleteTask(taskId, ctx);
       res.status(200).json(ResponseFormatter.success(null, "Task deleted"));
     } catch (error) {
       next(error);
     }
   }
 }
-

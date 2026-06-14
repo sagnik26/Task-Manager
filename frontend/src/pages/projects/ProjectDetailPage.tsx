@@ -1,20 +1,20 @@
-import AddIcon from "@mui/icons-material/Add";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
-  Box,
-  Button,
-  Divider,
-  Alert,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  Plus,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../modules/auth/context/useAuth.ts";
-import { getProject } from "../../api/projects.api";
+import { ProjectMembersPanel } from "../../modules/projects/components/ProjectMembersPanel";
+import { getProject, deleteProject, listProjectMembers, listProjects } from "../../api/projects.api";
+import { Can } from "../../shared/permissions/Can";
 import {
   createTask,
   deleteTask,
@@ -25,20 +25,34 @@ import { toApiError } from "../../shared/utils/apiErrors";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { LoadingState } from "../../shared/ui/LoadingState";
+import { KanbanBoard } from "../../modules/tasks/components/KanbanBoard";
 import {
-  TaskFilters,
-  type TaskAssigneeFilter,
-} from "../../modules/tasks/components/TaskFilters.tsx";
-import { TaskList } from "../../modules/tasks/components/TaskList.tsx";
-import { TaskModal } from "../../modules/tasks/components/TaskModal.tsx";
+  DEFAULT_TASK_FILTERS,
+  FilterPanel,
+  type TaskFilterState,
+} from "../../modules/tasks/components/FilterPanel";
+import {
+  DEFAULT_SORT,
+  SortPanel,
+  type SortState,
+} from "../../modules/tasks/components/SortPanel";
+import { TaskModal } from "../../modules/tasks/components/TaskModal";
+import {
+  applyTaskQuery,
+  countActiveFilters,
+  isQueryActive,
+  isSortActive,
+} from "../../modules/tasks/utils/applyTaskQuery";
+import { PROJECT_SORT_OPTIONS, projectVisuals } from "../../shared/theme/design";
 import type { Task, TaskStatus } from "../../types/tasks";
 
 export function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.id ?? "";
-
+  const navigate = useNavigate();
   const { user } = useAuth();
   const currentUserId = user?.id ?? "me";
+  const userName = user?.name ?? "Me";
 
   const queryClient = useQueryClient();
   const projectQuery = useQuery({
@@ -47,40 +61,109 @@ export function ProjectDetailPage() {
     enabled: Boolean(projectId),
   });
 
-  const [filters, setFilters] = useState<{
-    status: TaskStatus | "all";
-    assignee: TaskAssigneeFilter;
-  }>({ status: "all", assignee: "all" });
+  const projectsQuery = useQuery({
+    queryKey: ["projects"],
+    queryFn: listProjects,
+  });
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks", projectId, filters],
-    queryFn: () =>
-      listTasks(projectId, {
-        status: filters.status === "all" ? undefined : filters.status,
-        // Backend only accepts a UUID here; "unassigned" is handled client-side below.
-        assignee: filters.assignee === "me" ? currentUserId : undefined,
-      }),
+    queryKey: ["tasks", projectId],
+    queryFn: () => listTasks(projectId, {}),
     enabled: Boolean(projectId),
   });
 
+  const membersQuery = useQuery({
+    queryKey: ["project-members", projectId],
+    queryFn: () => listProjectMembers(projectId),
+    enabled: Boolean(projectId),
+  });
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [appliedFilterState, setAppliedFilterState] =
+    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [appliedSortState, setAppliedSortState] = useState<SortState>(DEFAULT_SORT);
+  const [draftFilterState, setDraftFilterState] =
+    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [draftSortState, setDraftSortState] = useState<SortState>(DEFAULT_SORT);
+
   const [taskModalOpen, setTaskModalOpen] = useState(false);
-  const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">(
-    "create",
-  );
+  const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
   const [tasksActionError, setTasksActionError] = useState<string | null>(null);
+  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(null);
 
-  const tasks = useMemo(() => {
-    return (tasksQuery.data ?? []) as Task[];
-  }, [tasksQuery.data]);
+  const tasks = useMemo(() => (tasksQuery.data ?? []) as Task[], [tasksQuery.data]);
 
-  const filtered = useMemo(() => {
-    return tasks.filter((t) => {
-      if (filters.assignee === "unassigned" && t.assigneeId !== null)
+  const filtered = useMemo(
+    () =>
+      applyTaskQuery(
+        tasks,
+        { ...appliedFilterState, ...appliedSortState },
+        { currentUserId },
+      ),
+    [appliedFilterState, appliedSortState, currentUserId, tasks],
+  );
+
+  const activeFilterCount = countActiveFilters(appliedFilterState);
+  const sortIsActive = isSortActive(appliedSortState);
+  const queryIsActive = isQueryActive(appliedFilterState, appliedSortState);
+
+  function clearFiltersAndSort() {
+    setAppliedFilterState(DEFAULT_TASK_FILTERS);
+    setAppliedSortState(DEFAULT_SORT);
+    setDraftFilterState(DEFAULT_TASK_FILTERS);
+    setDraftSortState(DEFAULT_SORT);
+  }
+
+  function openFilterPanel() {
+    setSortOpen(false);
+    setFilterOpen((open) => {
+      if (open) {
+        setDraftFilterState(appliedFilterState);
         return false;
+      }
+      setDraftFilterState(appliedFilterState);
       return true;
     });
-  }, [filters.assignee, tasks]);
+  }
+
+  function openSortPanel() {
+    setFilterOpen(false);
+    setSortOpen((open) => {
+      if (open) {
+        setDraftSortState(appliedSortState);
+        return false;
+      }
+      setDraftSortState(appliedSortState);
+      return true;
+    });
+  }
+
+  function applyFilters() {
+    setAppliedFilterState(draftFilterState);
+    setFilterOpen(false);
+  }
+
+  function cancelFilters() {
+    setDraftFilterState(appliedFilterState);
+    setFilterOpen(false);
+  }
+
+  function applySort() {
+    setAppliedSortState(draftSortState);
+    setSortOpen(false);
+  }
+
+  function cancelSort() {
+    setDraftSortState(appliedSortState);
+    setSortOpen(false);
+  }
+
+  const projectIndex = (projectsQuery.data ?? []).findIndex((p) => p.id === projectId);
+  const { color: projectColor } = projectVisuals(Math.max(0, projectIndex));
 
   const createTaskMutation = useMutation({
     mutationFn: (payload: Omit<Task, "id">) => {
@@ -111,25 +194,20 @@ export function ProjectDetailPage() {
     onMutate: async ({ taskId, patch }) => {
       setTasksActionError(null);
       await queryClient.cancelQueries({ queryKey: ["tasks", projectId] });
-      const previous = queryClient.getQueryData([
-        "tasks",
-        projectId,
-        filters,
-      ]) as Task[] | undefined;
+      const previous = queryClient.getQueryData(["tasks", projectId]) as
+        | Task[]
+        | undefined;
       if (previous) {
-        queryClient.setQueryData(["tasks", projectId, filters], (curr) => {
-          const list = (curr as Task[] | undefined) ?? [];
-          return list.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
-        });
+        queryClient.setQueryData(
+          ["tasks", projectId],
+          previous.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+        );
       }
       return { previous };
     },
     onError: (error, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(
-          ["tasks", projectId, filters],
-          context.previous,
-        );
+        queryClient.setQueryData(["tasks", projectId], context.previous);
       }
       const apiError = toApiError(error);
       setTasksActionError(
@@ -151,6 +229,17 @@ export function ProjectDetailPage() {
     },
   });
 
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => deleteProject(projectId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      navigate("/projects");
+    },
+    onError: (error) => {
+      setDeleteProjectError(toApiError(error).message);
+    },
+  });
+
   if (projectQuery.isLoading) {
     return <LoadingState label="Loading project…" />;
   }
@@ -162,7 +251,7 @@ export function ProjectDetailPage() {
         <EmptyState
           title="Project not found"
           description="The project you’re looking for doesn’t exist (or you don’t have access)."
-          actionLabel="Back to projects"
+          actionLabel="Back to dashboard"
           actionHref="/projects"
         />
       );
@@ -182,7 +271,7 @@ export function ProjectDetailPage() {
       <EmptyState
         title="Project not found"
         description="The project you’re looking for doesn’t exist (or you don’t have access)."
-        actionLabel="Back to projects"
+        actionLabel="Back to dashboard"
         actionHref="/projects"
       />
     );
@@ -196,61 +285,109 @@ export function ProjectDetailPage() {
     await createTaskMutation.mutateAsync(next);
   }
 
-  async function handleDeleteTask(taskId: string) {
-    await deleteTaskMutation.mutateAsync(taskId);
+  function openCreateTask(status: TaskStatus = "todo") {
+    setTaskModalMode("create");
+    setEditingTask(null);
+    setDefaultStatus(status);
+    setTaskModalOpen(true);
+  }
+
+  function handleDeleteProject() {
+    const ok = window.confirm(
+      `Delete "${project!.name}"? All tasks in this project will be permanently removed.`,
+    );
+    if (!ok) return;
+    setDeleteProjectError(null);
+    deleteProjectMutation.mutate();
   }
 
   return (
-    <Box sx={{ display: "grid", gap: 2.5 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Button
-          component={RouterLink}
-          to="/projects"
-          startIcon={<ArrowBackIcon />}
-          variant="text"
-        >
-          Projects
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setTaskModalMode("create");
-            setEditingTask(null);
-            setTaskModalOpen(true);
-          }}
-        >
-          Create task
-        </Button>
-      </Stack>
+    <>
+      <div className="board-view" style={{ flex: 1, minHeight: 0 }}>
+        <div className="board-header">
+          <div className="breadcrumb">
+            <button type="button" className="breadcrumb__link" onClick={() => navigate("/projects")}>
+              Dashboard
+            </button>
+            <ChevronRight size={12} color="var(--secondary)" />
+            <span style={{ fontWeight: 500, color: "var(--ink)" }}>{project.name}</span>
+          </div>
 
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h5" sx={{ fontWeight: 850 }}>
-          {project.name}
-        </Typography>
-        {project.description ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            {project.description}
-          </Typography>
-        ) : null}
-      </Paper>
-
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            Tasks
-          </Typography>
-          {tasksActionError ? (
-            <Alert severity="error">{tasksActionError}</Alert>
+          <div className="board-title-row" style={{ marginBottom: 13 }}>
+            <span className="board-title-dot" style={{ background: projectColor }} />
+            <h1 className="board-title">{project.name}</h1>
+            <ChevronDown size={14} color="var(--secondary)" />
+          </div>
+          {queryIsActive && tasks.length > 0 ? (
+            <p className="dashboard-subtitle" style={{ marginTop: -8, marginBottom: 8 }}>
+              Showing {filtered.length} of {tasks.length} tasks
+            </p>
           ) : null}
-          <TaskFilters
-            status={filters.status}
-            assignee={filters.assignee}
-            onChange={(next) => setFilters(next)}
-          />
+        </div>
 
-          <Divider />
+        <div className="board-toolbar">
+          <button type="button" className="btn btn-primary btn-primary--sm" onClick={() => openCreateTask()}>
+            <Plus size={12} strokeWidth={2.5} />
+            New task
+          </button>
+          <div className="toolbar-separator" />
+          <button
+            type="button"
+            className={`toolbar-btn${activeFilterCount > 0 ? " toolbar-btn--active" : ""}`}
+            onClick={openFilterPanel}
+          >
+            <Filter size={13} />
+            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </button>
+          <button
+            type="button"
+            className={`toolbar-btn${sortIsActive ? " toolbar-btn--active" : ""}`}
+            onClick={openSortPanel}
+          >
+            <ArrowUpDown size={13} />
+            Sort
+          </button>
+          <Can permission="manageProjectMembers">
+            <button
+              type="button"
+              className={`toolbar-btn${membersOpen ? " toolbar-btn--active" : ""}`}
+              onClick={() => {
+                setMembersOpen(true);
+                setFilterOpen(false);
+                setSortOpen(false);
+              }}
+            >
+              <Users size={13} />
+              Members
+            </button>
+          </Can>
+          <Can permission="deleteProject">
+            <button
+              type="button"
+              className="toolbar-btn toolbar-btn--danger"
+              onClick={handleDeleteProject}
+              disabled={deleteProjectMutation.isPending}
+              aria-label="Delete project"
+            >
+              <Trash2 size={13} />
+              Delete project
+            </button>
+          </Can>
+        </div>
 
+        {deleteProjectError ? (
+          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
+            {deleteProjectError}
+          </div>
+        ) : null}
+
+        {tasksActionError ? (
+          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
+            {tasksActionError}
+          </div>
+        ) : null}
+
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
           {tasksQuery.isLoading ? (
             <LoadingState label="Loading tasks…" />
           ) : tasksQuery.isError ? (
@@ -260,52 +397,79 @@ export function ProjectDetailPage() {
               onAction={() => void tasksQuery.refetch()}
             />
           ) : tasks.length === 0 ? (
-            <EmptyState
-              title="No tasks yet"
-              description="Create your first task to start tracking work in this project."
-              actionLabel="Create task"
-              onAction={() => {
-                setTaskModalMode("create");
-                setEditingTask(null);
-                setTaskModalOpen(true);
-              }}
-            />
+            <div className="page-scroll" style={{ flex: 1 }}>
+              <EmptyState
+                title="No tasks yet"
+                description="Create your first task to start tracking work in this project."
+                actionLabel="Create task"
+                onAction={() => openCreateTask()}
+              />
+            </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              title="No tasks match your filters"
-              description="Try changing status or assignee filters."
-              actionLabel="Reset filters"
-              onAction={() => setFilters({ status: "all", assignee: "all" })}
-            />
+            <div className="page-scroll" style={{ flex: 1 }}>
+              <EmptyState
+                title="No tasks match your filters or sort"
+                description="Try changing your filter or sort settings."
+                actionLabel="Clear filters and sort"
+                onAction={clearFiltersAndSort}
+              />
+            </div>
           ) : (
-            <TaskList
+            <KanbanBoard
               tasks={filtered}
               currentUserId={currentUserId}
-              onEdit={(task) => {
+              userName={userName}
+              onAddTask={openCreateTask}
+              onEditTask={(task) => {
                 setTaskModalMode("edit");
                 setEditingTask(task);
                 setTaskModalOpen(true);
               }}
-              onChangeStatus={(taskId, status) => {
-                void updateTaskMutation.mutateAsync({
-                  taskId,
-                  patch: { status },
-                });
-              }}
             />
           )}
-        </Stack>
-      </Paper>
+
+          {filterOpen ? (
+            <FilterPanel
+              tasks={tasks}
+              state={draftFilterState}
+              currentUserId={currentUserId}
+              assignees={membersQuery.data ?? []}
+              onChange={(next) => setDraftFilterState((s) => ({ ...s, ...next }))}
+              onClear={() => setDraftFilterState(DEFAULT_TASK_FILTERS)}
+              onApply={applyFilters}
+              onClose={cancelFilters}
+            />
+          ) : null}
+          {sortOpen ? (
+            <SortPanel
+              state={draftSortState}
+              options={PROJECT_SORT_OPTIONS}
+              onChange={(next) => setDraftSortState((s) => ({ ...s, ...next }))}
+              onClear={() => setDraftSortState(DEFAULT_SORT)}
+              onApply={applySort}
+              onClose={cancelSort}
+            />
+          ) : null}
+          {membersOpen ? (
+            <ProjectMembersPanel
+              projectId={projectId}
+              onClose={() => setMembersOpen(false)}
+            />
+          ) : null}
+        </div>
+      </div>
 
       <TaskModal
         open={taskModalOpen}
         mode={taskModalMode}
         task={editingTask}
         currentUserId={currentUserId}
+        assignees={membersQuery.data ?? []}
+        defaultStatus={defaultStatus}
         onClose={() => setTaskModalOpen(false)}
         onSave={handleSaveTask}
-        onDelete={handleDeleteTask}
+        onDelete={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
       />
-    </Box>
+    </>
   );
 }

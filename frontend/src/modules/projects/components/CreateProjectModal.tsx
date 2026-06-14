@@ -1,14 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-} from "@mui/material";
+import { X } from "lucide-react";
 
 import { toApiError } from "../../../shared/utils/apiErrors";
 
@@ -39,6 +30,8 @@ export function CreateProjectModal({
     [submitting, values.name],
   );
 
+  if (!open) return null;
+
   async function handleCreate() {
     setErrors({});
     setSubmitError(null);
@@ -67,44 +60,79 @@ export function CreateProjectModal({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Create project</DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1, display: "grid", gap: 2 }}>
-          {submitError ? <Alert severity="error">{submitError}</Alert> : null}
-          <TextField
-            label="Name"
-            value={values.name}
-            onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-            error={Boolean(errors.name)}
-            helperText={errors.name}
-            autoFocus
-            required
-          />
-          <TextField
-            label="Description"
-            value={values.description}
-            onChange={(e) =>
-              setValues((v) => ({ ...v, description: e.target.value }))
-            }
-            multiline
-            minRows={3}
-          />
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={submitting}>
-          Cancel
-        </Button>
-        <Button
-          onClick={() => void handleCreate()}
-          variant="contained"
-          disabled={!canSubmit}
-        >
-          {submitting ? "Creating…" : "Create"}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <div
+        className="modal-card"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal
+        aria-labelledby="create-project-title"
+      >
+        <div className="modal-card__header">
+          <h3 className="modal-card__title" id="create-project-title">
+            Create project
+          </h3>
+          <button type="button" className="icon-btn icon-btn--sm" onClick={onClose} aria-label="Close">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="modal-card__body">
+          {submitError ? <div className="alert-error" style={{ marginBottom: 15 }}>{submitError}</div> : null}
+
+          <div style={{ marginBottom: 13 }}>
+            <label className="field-label" htmlFor="project-name">
+              Project name
+            </label>
+            <input
+              id="project-name"
+              className="field-input"
+              placeholder="Website Redesign"
+              value={values.name}
+              onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
+              autoFocus
+            />
+            {errors.name ? <div className="field-error">{errors.name}</div> : null}
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label className="field-label" htmlFor="project-desc">
+              Description
+            </label>
+            <textarea
+              id="project-desc"
+              className="field-input"
+              style={{ height: 88, padding: "10px 14px", resize: "vertical" }}
+              placeholder="Optional description"
+              value={values.description}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, description: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ height: 38, padding: "0 18px" }}
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-primary--sm"
+              style={{ height: 38, padding: "0 20px" }}
+              onClick={() => void handleCreate()}
+              disabled={!canSubmit}
+            >
+              {submitting ? "Creating…" : "Create project"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
-

@@ -1,8 +1,12 @@
+import type { ProjectStatus } from "../../../shared/constants/projects";
+import type { UserRole } from "../../../shared/constants/users";
+
 export type ProjectRow = {
   id: string;
   name: string;
   description: string | null;
-  owner_id: string;
+  tenant_id: string;
+  status: ProjectStatus;
   created_at: Date;
 };
 
@@ -10,8 +14,24 @@ export type Project = {
   id: string;
   name: string;
   description: string | null;
-  ownerId: string;
+  tenantId: string;
+  status: ProjectStatus;
   createdAt: Date;
+};
+
+export type ProjectMember = {
+  userId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  joinedAt: Date;
+};
+
+export type ProjectMemberRow = {
+  id: string;
+  project_id: string;
+  user_id: string;
+  joined_at: Date;
 };
 
 export type TaskRow = {
@@ -46,12 +66,20 @@ export type ProjectDetail = Project & {
 export type CreateProjectInput = {
   name: string;
   description?: string | null;
-  ownerId: string;
+  tenantId: string;
+  creatorId: string;
 };
 
 export type UpdateProjectInput = {
   name?: string;
   description?: string | null;
+  status?: ProjectStatus;
+};
+
+export type ProjectAccessContext = {
+  userId: string;
+  tenantId: string;
+  role: UserRole;
 };
 
 /** Task counts for a project (dashboard / analytics). */
@@ -62,4 +90,3 @@ export type ProjectTaskStats = {
     count: number;
   }>;
 };
-

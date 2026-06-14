@@ -100,6 +100,32 @@
             "description": "Generated from cURL: curl -X POST \"http://localhost:4000/auth/login\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"jane@example.com\",\n    \"password\": \"secret123\"\n  }'"
           },
           "response": []
+        },
+        {
+          "name": "get permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/auth/permissions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "auth",
+                "permissions"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -262,6 +288,143 @@
               ]
             },
             "description": "Generated from cURL: curl -s -X DELETE \"http://localhost:4000/projects/PROJECT_ID\" \\\n  -H \"Authorization: Bearer TOKEN\""
+          },
+          "response": []
+        },
+        {
+          "name": "add project member (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"USER_ID\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID/members",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID",
+                "members"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "remove project member (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/projects/PROJECT_ID/members/USER_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "projects",
+                "PROJECT_ID",
+                "members",
+                "USER_ID"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "item": [
+        {
+          "name": "list tenant users (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/users",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update user role or active status (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer TOKEN",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"role\":\"developer\",\"is_active\":true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/users/USER_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "users",
+                "USER_ID"
+              ]
+            }
           },
           "response": []
         }

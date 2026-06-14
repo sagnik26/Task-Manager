@@ -1,5 +1,3 @@
-import { Alert, Box, Button } from "@mui/material";
-
 export function ErrorState({
   message = "Something went wrong.",
   actionLabel,
@@ -10,20 +8,14 @@ export function ErrorState({
   onAction?: () => void;
 }) {
   return (
-    <Box sx={{ py: 4 }}>
-      <Alert
-        severity="error"
-        action={
-          actionLabel && onAction ? (
-            <Button color="inherit" size="small" onClick={onAction}>
-              {actionLabel}
-            </Button>
-          ) : undefined
-        }
-      >
-        {message}
-      </Alert>
-    </Box>
+    <div className="state-panel">
+      <h3 className="state-panel__title">Error</h3>
+      <p className="state-panel__desc">{message}</p>
+      {actionLabel && onAction ? (
+        <button type="button" className="btn btn-primary btn-primary--md" onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
   );
 }
-

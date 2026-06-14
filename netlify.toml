@@ -1,0 +1,10 @@
+# Netlify build settings (base directory = frontend in UI, or use base below).
+[build]
+  base = "frontend"
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

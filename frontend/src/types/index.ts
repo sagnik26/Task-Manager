@@ -1,4 +1,10 @@
-export type { AuthSession, User } from "./auth";
+export type {
+  AuthSession,
+  PermissionCanFlags,
+  PermissionFlags,
+  User,
+  UserRole,
+} from "./auth";
 export type {
   ApiError,
   BackendErrorBody,
@@ -6,5 +12,6 @@ export type {
   BackendSuccessResponse,
 } from "./api";
 export type { Project } from "./projects";
-export type { Task, TaskPriority, TaskStatus } from "./tasks";
+export type { Task, TaskPriority, TaskStatus, AssignedTask } from "./tasks";
+export type { TenantUser } from "./users";
 

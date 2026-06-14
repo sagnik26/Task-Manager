@@ -13,4 +13,3 @@ export type AuthContextValue = AuthSession & {
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
-

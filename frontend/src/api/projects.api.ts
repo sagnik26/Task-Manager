@@ -53,3 +53,32 @@ export async function getProjectStats(projectId: string): Promise<ProjectStats> 
   return extractResponseData<ProjectStats>(res.data);
 }
 
+export type ProjectMember = {
+  userId: string;
+  name: string;
+  email: string;
+  role: "admin" | "developer";
+  joinedAt: string;
+};
+
+export async function listProjectMembers(
+  projectId: string,
+): Promise<ProjectMember[]> {
+  const res = await apiClient.get(`/projects/${projectId}/members`);
+  return extractResponseData<ProjectMember[]>(res.data);
+}
+
+export async function addProjectMember(
+  projectId: string,
+  userId: string,
+): Promise<void> {
+  await apiClient.post(`/projects/${projectId}/members`, { user_id: userId });
+}
+
+export async function removeProjectMember(
+  projectId: string,
+  userId: string,
+): Promise<void> {
+  await apiClient.delete(`/projects/${projectId}/members/${userId}`);
+}
+

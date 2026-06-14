@@ -1,6 +1,18 @@
 import { apiClient } from "../shared/http/client";
+import { normalizeDueDate } from "../shared/utils/dates";
 import { extractResponseData } from "../shared/utils/apiResponse";
 import type { Task, TaskPriority, TaskStatus } from "../types";
+
+function normalizeTask(task: Task): Task {
+  return {
+    ...task,
+    dueDate: normalizeDueDate(task.dueDate),
+  };
+}
+
+function normalizeTasks(tasks: Task[]): Task[] {
+  return tasks.map(normalizeTask);
+}
 
 export type ListTasksFilters = {
   status?: TaskStatus;
@@ -17,7 +29,7 @@ export async function listTasks(
       assignee: filters.assignee,
     },
   });
-  return extractResponseData<Task[]>(res.data);
+  return normalizeTasks(extractResponseData<Task[]>(res.data));
 }
 
 export type CreateTaskPayload = {
@@ -56,7 +68,7 @@ export async function createTask(
   payload: CreateTaskPayload,
 ): Promise<Task> {
   const res = await apiClient.post(`/projects/${projectId}/tasks`, toBackendTaskBody(payload));
-  return extractResponseData<Task>(res.data);
+  return normalizeTask(extractResponseData<Task>(res.data));
 }
 
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
@@ -66,7 +78,7 @@ export async function updateTask(
   payload: UpdateTaskPayload,
 ): Promise<Task> {
   const res = await apiClient.patch(`/tasks/${taskId}`, toBackendTaskBody(payload));
-  return extractResponseData<Task>(res.data);
+  return normalizeTask(extractResponseData<Task>(res.data));
 }
 
 export async function deleteTask(taskId: string): Promise<void> {

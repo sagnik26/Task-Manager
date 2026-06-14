@@ -1,12 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "../shared/layouts/ProtectedRoute";
-import { Navbar } from "../shared/layouts/Navbar";
+import { AppShell } from "../shared/layouts/AppShell";
 import { EmptyState } from "../shared/ui/EmptyState";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { RegisterPage } from "../pages/auth/RegisterPage";
 import { ProjectsListPage } from "../pages/projects/ProjectsListPage";
 import { ProjectDetailPage } from "../pages/projects/ProjectDetailPage";
+import { UsersPage } from "../pages/users/UsersPage";
+import { MyTasksPage } from "../pages/tasks/MyTasksPage";
 
 export function App() {
   return (
@@ -17,13 +19,16 @@ export function App() {
       <Route
         element={
           <ProtectedRoute>
-            <Navbar />
+            <AppShell />
           </ProtectedRoute>
         }
       >
         <Route path="/" element={<Navigate to="/projects" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
         <Route path="/projects" element={<ProjectsListPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
+        <Route path="/my-tasks" element={<MyTasksPage />} />
+        <Route path="/users" element={<UsersPage />} />
       </Route>
 
       <Route
@@ -32,7 +37,7 @@ export function App() {
           <EmptyState
             title="Not found"
             description="The page you’re looking for doesn’t exist."
-            actionLabel="Go to projects"
+            actionLabel="Go to dashboard"
             actionHref="/projects"
           />
         }
@@ -40,4 +45,3 @@ export function App() {
     </Routes>
   );
 }
-

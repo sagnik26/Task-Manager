@@ -1,24 +1,44 @@
 -- Evaluator seed data (idempotent). Login: test@example.com / password123
 -- Applied only when RUN_SEED=1 (see scripts/entrypoint.sh).
 
-INSERT INTO users (id, name, email, password)
+INSERT INTO tenants (id, name, slug)
+VALUES (
+  'dddddddd-dddd-dddd-dddd-dddddddddd01',
+  'TaskFlow',
+  'taskflow'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO users (id, tenant_id, name, email, password_hash, role, is_active)
 VALUES (
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa01',
+  'dddddddd-dddd-dddd-dddd-dddddddddd01',
   'Test User',
   'test@example.com',
-  '$2b$12$m9Xd8YGHn6uqn0VwsHNT7uBOEXVKIhYl4J7Kouv.BFcj4Flw9EKpm'
+  '$2b$12$m9Xd8YGHn6uqn0VwsHNT7uBOEXVKIhYl4J7Kouv.BFcj4Flw9EKpm',
+  'admin',
+  true
 )
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (tenant_id, email) DO NOTHING;
 
-INSERT INTO projects (id, name, description, owner_id)
-SELECT
-  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,
+INSERT INTO projects (id, tenant_id, name, description, status)
+VALUES (
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01',
+  'dddddddd-dddd-dddd-dddd-dddddddddd01',
   'Website Redesign',
   'Q2 website redesign project',
+  'active'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO project_members (project_id, user_id)
+SELECT
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01'::uuid,
   u.id
 FROM users u
 WHERE u.email = 'test@example.com'
-ON CONFLICT (id) DO NOTHING;
+  AND u.tenant_id = 'dddddddd-dddd-dddd-dddd-dddddddddd01'
+ON CONFLICT (project_id, user_id) DO NOTHING;
 
 INSERT INTO tasks (
   id,

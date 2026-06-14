@@ -1,5 +1,6 @@
 import { AppError } from "../../../shared/utils/AppError";
 import type { ProjectsService } from "../../projects/services/projects.service";
+import type { ProjectAccessContext } from "../../projects/types/projects.types";
 import type { Task, TaskRow } from "../types/tasks.types";
 import type {
   CreateTaskInput,
@@ -36,33 +37,49 @@ export class TasksService {
   async listProjectTasks(
     projectId: string,
     filters: ListProjectTasksFilters,
+    ctx: ProjectAccessContext,
   ): Promise<Task[]> {
-    await this.projectsService.getProjectOrThrow(projectId);
+    await this.projectsService.assertProjectAccess(ctx, projectId);
     const tasks = await this.tasksRepository.listByProjectId(projectId, filters);
     return tasks.map(mapTask);
   }
 
-  async createTask(input: CreateTaskInput): Promise<Task> {
-    await this.projectsService.getProjectOrThrow(input.projectId);
+  async createTask(
+    input: CreateTaskInput,
+    ctx: ProjectAccessContext,
+  ): Promise<Task> {
+    await this.projectsService.assertProjectAccess(ctx, input.projectId);
     const row = await this.tasksRepository.create(input);
     return mapTask(row);
   }
 
-  async updateTask(input: UpdateTaskInput): Promise<Task> {
+  async updateTask(
+    input: UpdateTaskInput,
+    ctx: ProjectAccessContext,
+  ): Promise<Task> {
+    const existing = await this.tasksRepository.findById(input.taskId);
+    if (!existing) throw new AppError("not found", 404);
+
+    await this.projectsService.assertProjectAccess(ctx, existing.project_id);
+
     const updated = await this.tasksRepository.update(input);
     if (!updated) throw new AppError("not found", 404);
     return mapTask(updated);
   }
 
-  async deleteTask(taskId: string, actorUserId: string): Promise<void> {
+  async deleteTask(
+    taskId: string,
+    ctx: ProjectAccessContext,
+  ): Promise<void> {
     const task = await this.tasksRepository.findById(taskId);
     if (!task) throw new AppError("not found", 404);
 
-    const project = await this.projectsService.getProjectOrThrow(task.project_id);
-
-    const isOwner = project.ownerId === actorUserId;
-    const isCreator = task.created_by === actorUserId;
-    if (!isOwner && !isCreator) {
+    const canDelete = await this.projectsService.canUserDeleteTask(
+      ctx,
+      task.project_id,
+      task.created_by,
+    );
+    if (!canDelete) {
       throw new AppError("forbidden", 403);
     }
 
@@ -70,4 +87,3 @@ export class TasksService {
     if (!ok) throw new AppError("not found", 404);
   }
 }
-

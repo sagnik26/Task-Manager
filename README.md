@@ -13,7 +13,7 @@
 | Auth       | **bcrypt** (cost 12), **JWT** (`user_id`, `email`); **`Authorization: Bearer`** or **`authToken`** cookie |
 | Validation | **zod**                                                                                                   |
 | Logging    | **winston**                                                                                               |
-| Frontend   | **React 18**, TypeScript, **Vite**, **MUI**, **TanStack Query**                                           |
+| Frontend   | **React 19**, TypeScript, **Vite**, custom CSS, **Lucide** icons, **TanStack Query**, **Zustand** |
 | Run / DB   | **Docker Compose** (Postgres + API + frontend; optional **pgAdmin**)                                      |
 
 ---
@@ -40,9 +40,106 @@ The backend is a **modular monolith**: one deployable Node app, but each busines
 
 - Migrations + optional seed on docker compose up: On container start, backend/scripts/entrypoint.sh runs npm run migrate; if RUN_SEED=1, it applies seed.sql; then it starts the server.
 
+### RBAC (role-based access control)
+
+Permissions are defined in `backend/src/shared/permissions/permissions.ts` and enforced via `authorize()` middleware on routes. The frontend fetches `GET /auth/permissions` after login and gates UI with `<Can>` / `useCan()`.
+
+| Permission flag | Who | What it gates |
+| --------------- | --- | ------------- |
+| `createProject` | Admin | Create project button, `POST /projects` |
+| `deleteProject` | Admin | Delete project on dashboard cards and project detail, `DELETE /projects/:id` |
+| `manageProjectMembers` | Admin | Members panel, add/remove project members |
+| `manageUsers` | Admin | Users page, `GET/PATCH /users` |
+
+Developers can access only projects they belong to (`project_members`) but can create, update, and delete tasks within those projects (subject to task ownership rules on delete).
+
+See [`docs/rbac-implementation-guide.md`](./docs/rbac-implementation-guide.md) for the full permission model and extension guide.
+
 ---
 
-## 3. Running Locally
+## 3. Database schema
+
+TaskFlow uses a **multitenant** PostgreSQL schema. All users and projects belong to a **tenant**. Project access is granted through **`project_members`** (not a single owner). Users have a **role** within their tenant: `admin` or `developer`.
+
+```mermaid
+erDiagram
+  TENANTS {
+    uuid id PK
+    string name
+    string slug
+    timestamp created_at
+  }
+  USERS {
+    uuid id PK
+    uuid tenant_id FK
+    string name
+    string email
+    string password_hash
+    enum role "admin | developer"
+    boolean is_active
+    timestamp created_at
+  }
+  PROJECTS {
+    uuid id PK
+    uuid tenant_id FK
+    string name
+    string description
+    enum status "active | archived"
+    timestamp created_at
+  }
+  PROJECT_MEMBERS {
+    uuid id PK
+    uuid project_id FK
+    uuid user_id FK
+    timestamp joined_at
+  }
+  TASKS {
+    uuid id PK
+    uuid project_id FK
+    uuid assignee_id FK
+    uuid created_by FK
+    string title
+    string description
+    enum status "todo | in_progress | done"
+    enum priority "low | medium | high"
+    date due_date
+    timestamp created_at
+  }
+  TENANTS ||--o{ USERS : has
+  TENANTS ||--o{ PROJECTS : owns
+  PROJECTS ||--o{ PROJECT_MEMBERS : includes
+  USERS ||--o{ PROJECT_MEMBERS : joins
+  PROJECTS ||--o{ TASKS : contains
+  USERS ||--o{ TASKS : assigned_to
+```
+
+### Relationships
+
+- A **tenant** has many users and many projects.
+- A **user** belongs to one tenant; email is unique per tenant (`tenant_id` + `email`).
+- A **project** belongs to one tenant and has many members via `project_members`.
+- **Tasks** belong to a project; `assignee_id` and `created_by` reference users.
+
+### Access rules
+
+| Role | Project visibility | Project mutations | User management |
+| ---- | ---------------- | ----------------- | --------------- |
+| **admin** | All projects in tenant | Create, update, delete any tenant project | List users, change roles, toggle `is_active`, manage project members |
+| **developer** | Only projects where listed in `project_members` | Update/delete only if a member (delete project: admin only) | None |
+
+### Registration
+
+New users **auto-join** the default tenant (`slug: taskflow`). They are created with role `developer` and `is_active = true`.
+
+### Schema notes
+
+- `users.password` was renamed to `password_hash`.
+- `projects.owner_id` was removed; the creator is inserted into `project_members`.
+- `tasks.updated_at` is retained for API compatibility (not shown in the diagram).
+
+---
+
+## 4. Running Locally
 
 - Install **Docker** in local machine.
 
@@ -63,9 +160,33 @@ docker compose up --build
 
 **Local development without Docker (optional)**
 
-- In **`backend/`**, run **`npm install`** if you are not using Docker.
+Run the database in Docker, then start the API and UI on your machine:
 
-- In **`frontend/`**, run **`npm install`** if you are not using Docker.
+```bash
+# 1. Database only (keep this running)
+docker compose up postgres -d
+
+# 2. Backend (from repo root)
+cd backend
+npm install          # required once — without this, `npm run dev` fails with "tsx: command not found"
+cp .env.example .env # if you don't have backend/.env yet
+# In backend/.env use POSTGRES_HOST=localhost (not `postgres` — that hostname only works inside Docker)
+npm run dev          # http://localhost:4000
+
+# 3. Frontend (new terminal)
+cd frontend
+npm install
+npm run dev          # http://localhost:5173 — Vite proxies /api → localhost:4000
+```
+
+**Common local issues**
+
+| Symptom | Fix |
+| -------- | ----- |
+| `tsx: command not found` or `MODULE_NOT_FOUND` | Run `npm install` in `backend/` (dependencies are not committed). |
+| `ENOTFOUND postgres` | Set `POSTGRES_HOST=localhost` in `backend/.env` when running the API on your host. |
+| `ECONNREFUSED` on port 5432 | Start Postgres: `docker compose up postgres -d` (or run a local Postgres on 5432). |
+| `npm run start` fails | Run `npm run build` first — `start` runs compiled `dist/server.js`. Prefer `npm run dev` while developing. |
 
 ### PostgreSQL in pgAdmin (Docker Compose)
 
@@ -79,7 +200,7 @@ docker compose up --build
 
 ---
 
-## 4. Environment variables
+## 5. Environment variables
 
 Copy `backend/.env.example` to `backend/.env` and set at least **JWT_SECRET**.
 
@@ -111,7 +232,7 @@ Copy `backend/.env.example` to `backend/.env` and set at least **JWT_SECRET**.
 
 ---
 
-## 5. Running Migrations
+## 6. Running Migrations
 
 Migrations run **automatically** when the backend container starts (`backend/scripts/entrypoint.sh` runs `npm run migrate` before the server).
 
@@ -128,7 +249,7 @@ Rollback (when needed): `npm run migrate:down` from `backend/`.
 
 ---
 
-## 6. Test Credentials
+## 7. Test Credentials
 
 After seed runs (`RUN_SEED=1` in Docker by default), log in without registering:
 
@@ -136,28 +257,46 @@ After seed runs (`RUN_SEED=1` in Docker by default), log in without registering:
 | ------------ | ------------------ |
 | **Email**    | `test@example.com` |
 | **Password** | `password123`      |
+| **Tenant**   | `taskflow` (default) |
+| **Role**     | `admin`            |
 
 **Note:** Password rules are configurable via `PASSWORD_*` env vars; `backend/.env.example` uses a demo-friendly policy so the seed password works for registration too.
 
 ---
 
-## 7. API Reference
+## 8. API Reference
 
 **Base URL:** `http://localhost:4000`
 
+### Documentation
+
+| Document | Description |
+| -------- | ----------- |
+| [`docs/rbac-implementation-guide.md`](./docs/rbac-implementation-guide.md) | Permission model, backend `authorize()`, frontend `<Can>` |
+| [`docs/Frontend-Design-System.md`](./docs/Frontend-Design-System.md) | UI tokens, layout, and component patterns |
+| [`docs/taskflow-sagnik-ghosh.postman_collection.json`](./docs/taskflow-sagnik-ghosh.postman_collection.json) | Postman collection for all endpoints |
+
 ### Frontend notes (how it uses the API)
 
-- The UI is a React SPA (Vite) with MUI components.
-- **Routing:** Auth screens (login/register) and protected app screens (projects list, project detail).
+- The UI is a React SPA (Vite) with a custom design system (see `docs/Frontend-Design-System.md`).
+- **Routing:** Auth screens (login/register) and protected app screens (dashboard, project detail, my tasks, users).
 - **Auth/session behavior:**
   - The backend sets an `authToken` cookie on login/register; the UI also supports using the returned JWT for API calls.
+  - After login, the app loads `GET /auth/permissions` and stores permission flags for RBAC-gated UI.
   - The API client attaches credentials/tokens automatically and surfaces friendly errors (e.g., 401 → requires login, 403 → “forbidden” messaging).
 - **Server state (TanStack Query):**
-  - Project detail and tasks are fetched/cached via query keys and **invalidated** after task create/update/delete.
+  - Projects, tasks, and members are fetched/cached via query keys and **invalidated** after mutations.
   - Errors and loading states are rendered as dedicated UI states.
+- **App features:**
+  - **Dashboard** — project cards with progress stats; admins can delete projects from the card menu.
+  - **Project detail** — kanban board with create/edit task modal; filter and sort panels (status, priority, assignee, due date range; sort by due date, priority, created date). Changes apply only after clicking **Apply** (client-side on the loaded task list).
+  - **My tasks** — table of all tasks assigned to the current user across accessible projects.
+  - **Users** (admin) — tenant user list with role and active status.
+  - **Project members** (admin) — add/remove members from the project detail sidebar panel.
 - **Tasks UX details:**
-  - **Filters:** status filter plus assignee filter.
-  - **Optimistic updates:** status changes update immediately; on failure, the UI reverts to the previous task list and shows an error.
+  - **Assignee picker** — lists all project members in the task modal.
+  - **Due dates** — stored as `YYYY-MM-DD`; API ISO timestamps are normalized in the frontend for display and date inputs.
+  - **Optimistic updates:** task edits update immediately; on failure, the UI reverts and shows an error.
   - **Create/Edit modal validation (zod):** title required; description optional; assignee nullable; due date must be `YYYY-MM-DD` when provided.
 
 ### Swagger (OpenAPI)
@@ -171,7 +310,7 @@ The backend serves **Swagger UI** at **`/api-docs`** (full URL when running loca
 
 ### Postman
 
-A Postman Collection file is available at [`backend/docs/taskflow-sagnik-ghosh.postman_collection.json`](./backend/docs/taskflow-sagnik-ghosh.postman_collection.json). Import it into Postman to quickly try all endpoints.
+A Postman Collection file is available at [`docs/taskflow-sagnik-ghosh.postman_collection.json`](./docs/taskflow-sagnik-ghosh.postman_collection.json). Import it into Postman to quickly try all endpoints.
 
 **Auth:** Primarily relies on the **`authToken`** cookie set by `POST /auth/register` and `POST /auth/login`. If not found, it falls back to `Authorization: Bearer <your-jwt>`. In Postman, when you hit login or register, if cookie is set properly, you can run authenticated routes directly without setting Authorization.
 
@@ -218,19 +357,32 @@ Most successful JSON responses use:
 | POST   | `/auth/register` | No   | Create user; sets cookie; returns token + user |
 | POST   | `/auth/login`    | No   | Login; sets cookie; returns token + user       |
 | GET    | `/auth/profile`  | Yes  | Current user profile                           |
+| GET    | `/auth/permissions` | Yes | Permission flags for the current user's role |
 
 ---
 
 ### Projects
 
-| Method | Path                  | Auth | Description                           |
-| ------ | --------------------- | ---- | ------------------------------------- |
-| GET    | `/projects`           | Yes  | List projects the user can access     |
-| POST   | `/projects`           | Yes  | Create project (current user = owner) |
-| GET    | `/projects/:id`       | Yes  | Project detail including tasks        |
-| GET    | `/projects/:id/stats` | Yes  | Task counts by status and by assignee |
-| PATCH  | `/projects/:id`       | Yes  | Update name/description (owner only)  |
-| DELETE | `/projects/:id`       | Yes  | Delete project and tasks (owner only) |
+| Method | Path                  | Auth  | Description                                      |
+| ------ | --------------------- | ----- | ------------------------------------------------ |
+| GET    | `/projects`           | Yes   | List projects (admin: all in tenant; developer: member projects) |
+| POST   | `/projects`           | Yes   | Create project; creator added to `project_members` |
+| GET    | `/projects/:id`       | Yes   | Project detail including tasks                   |
+| GET    | `/projects/:id/stats` | Yes   | Task counts by status and by assignee            |
+| GET    | `/projects/:id/members` | Yes | List project members (any user with project access) |
+| PATCH  | `/projects/:id`       | Yes   | Update name/description/status (admin or member) |
+| DELETE | `/projects/:id`       | Yes   | Delete project and tasks (**admin** only)        |
+| POST   | `/projects/:id/members` | Admin | Add user to project (`user_id` in body)        |
+| DELETE | `/projects/:id/members/:userId` | Admin | Remove user from project              |
+
+---
+
+### Users (admin)
+
+| Method | Path           | Auth  | Description                                |
+| ------ | -------------- | ----- | ------------------------------------------ |
+| GET    | `/users`       | Admin | List users in the caller's tenant          |
+| PATCH  | `/users/:id`   | Admin | Update `role` and/or `is_active`           |
 
 ---
 
@@ -241,23 +393,23 @@ Most successful JSON responses use:
 | GET    | `/projects/:id/tasks` | Yes  | List tasks; query: `?status=`, `?assignee=<uuid>`       |
 | POST   | `/projects/:id/tasks` | Yes  | Create task in project                                  |
 | PATCH  | `/tasks/:id`          | Yes  | Update task fields                                      |
-| DELETE | `/tasks/:id`          | Yes  | Delete task (allowed for project owner or task creator) |
+| DELETE | `/tasks/:id`          | Yes  | Delete task (admin, or member who created it)        |
 
 **Task `status`:** `todo` | `in_progress` | `done`  
 **Task `priority`:** `low` | `medium` | `high`
 
 ---
 
-## 8. What I’d Do With More Time
+## 9. What I’d Do With More Time
 
-- **Tests:** Integration tests for auth, projects, and tasks.
+- **Tests:** Integration tests for auth, projects, tasks, and RBAC permission enforcement.
+- **Server-side task query:** Move project-detail filter/sort to `GET /projects/:id/tasks` query params (currently applied client-side after fetch).
 - **Pagination:** `?page` / `?limit` on list endpoints like projects & tasks.
 - **Security:** Per-route rate limits, refresh tokens or shorter access tokens.
 - **Observability:** Request IDs, consistent structured logging on every line, and basic route-level metrics (latency, errors).
 - **API contract:** Keep Swagger in sync with Zod by generating or checking OpenAPI from the same schemas.
-- **UX/UI:** Add richer UX (assignee picker backed by a real users endpoint, better keyboard shortcuts, and stronger empty/error state coverage across all pages).
-- **Project stats:** Extend `/projects/:id/stats` and surface it in the UI (task counts by status/assignee, trends, overdue counts).
-- **Drag-and-drop tasks:** Kanban-style board interactions to move tasks across `todo → in_progress → done`.
+- **Project stats:** Extend `/projects/:id/stats` and surface trends, overdue counts in the UI.
+- **Drag-and-drop tasks:** Kanban drag to move tasks across `todo → in_progress → done`.
 - **Dark mode:** Theme toggle that persists across sessions.
 
 Shortcuts: Code structure and architecture are my own design; I used AI only for some repetitive tasks which are known to me.

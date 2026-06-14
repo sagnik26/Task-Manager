@@ -1,11 +1,14 @@
 import logger from "../../../shared/config/logger";
+import { UserRole } from "../../../shared/constants/users";
 import { TaskStatus } from "../../../shared/constants/tasks";
 import { AppError } from "../../../shared/utils/AppError";
 import { ProjectsRepository } from "../repositories/projects.repository";
 import type {
   CreateProjectInput,
   Project,
+  ProjectAccessContext,
   ProjectDetail,
+  ProjectMember,
   ProjectTaskStats,
   ProjectRow,
   TaskRow,
@@ -24,7 +27,8 @@ export class ProjectsService {
       id: row.id,
       name: row.name,
       description: row.description,
-      ownerId: row.owner_id,
+      tenantId: row.tenant_id,
+      status: row.status,
       createdAt: row.created_at,
     };
   }
@@ -44,26 +48,50 @@ export class ProjectsService {
     };
   }
 
-  async listProjects(userId: string): Promise<Project[]> {
-    const rows = await this.projectsRepository.listForUser(userId);
-    return rows.map((r) => this.toProject(r));
-  }
-
-  /**
-   * Tasks module helper: ensure project exists and return owner id.
-   * Note: does not perform access checks beyond existence.
-   */
-  async getProjectOrThrow(
+  private async assertProjectInTenant(
     projectId: string,
-  ): Promise<{ id: string; ownerId: string }> {
+    tenantId: string,
+  ): Promise<ProjectRow> {
     const project = await this.projectsRepository.findById(projectId);
     if (!project) {
       throw new AppError("not found", 404);
     }
-    return { id: project.id, ownerId: project.owner_id };
+    if (project.tenant_id !== tenantId) {
+      throw new AppError("forbidden", 403);
+    }
+    return project;
   }
 
-  async createProject(input: CreateProjectInput): Promise<Project> {
+  async assertProjectAccess(
+    ctx: ProjectAccessContext,
+    projectId: string,
+  ): Promise<ProjectRow> {
+    const project = await this.assertProjectInTenant(projectId, ctx.tenantId);
+    const allowed = await this.projectsRepository.canUserAccessProject(
+      ctx.userId,
+      ctx.tenantId,
+      ctx.role,
+      projectId,
+    );
+    if (!allowed) {
+      throw new AppError("forbidden", 403);
+    }
+    return project;
+  }
+
+  async listProjects(ctx: ProjectAccessContext): Promise<Project[]> {
+    const rows = await this.projectsRepository.listForUser(
+      ctx.userId,
+      ctx.tenantId,
+      ctx.role,
+    );
+    return rows.map((r) => this.toProject(r));
+  }
+
+  async createProject(
+    ctx: ProjectAccessContext,
+    input: CreateProjectInput,
+  ): Promise<Project> {
     const name = input.name.trim();
     const description =
       input.description == null ? null : String(input.description).trim();
@@ -71,33 +99,23 @@ export class ProjectsService {
     const row = await this.projectsRepository.create({
       name,
       description,
-      ownerId: input.ownerId,
+      tenantId: ctx.tenantId,
+      creatorId: ctx.userId,
     });
 
     logger.info("Project created", {
       projectId: row.id,
-      ownerId: row.owner_id,
+      tenantId: row.tenant_id,
+      creatorId: ctx.userId,
     });
     return this.toProject(row);
   }
 
   async getProjectDetail(
-    userId: string,
+    ctx: ProjectAccessContext,
     projectId: string,
   ): Promise<ProjectDetail> {
-    const project = await this.projectsRepository.findById(projectId);
-    if (!project) {
-      throw new AppError("not found", 404);
-    }
-
-    const allowed = await this.projectsRepository.canUserAccessProject(
-      userId,
-      projectId,
-    );
-    if (!allowed) {
-      throw new AppError("forbidden", 403);
-    }
-
+    const project = await this.assertProjectAccess(ctx, projectId);
     const tasks = await this.projectsRepository.listTasksForProject(projectId);
 
     return {
@@ -107,21 +125,10 @@ export class ProjectsService {
   }
 
   async getProjectStats(
-    userId: string,
+    ctx: ProjectAccessContext,
     projectId: string,
   ): Promise<ProjectTaskStats> {
-    const project = await this.projectsRepository.findById(projectId);
-    if (!project) {
-      throw new AppError("not found", 404);
-    }
-
-    const allowed = await this.projectsRepository.canUserAccessProject(
-      userId,
-      projectId,
-    );
-    if (!allowed) {
-      throw new AppError("forbidden", 403);
-    }
+    await this.assertProjectAccess(ctx, projectId);
 
     const [statusRows, assigneeRows] = await Promise.all([
       this.projectsRepository.countTasksByStatusForProject(projectId),
@@ -145,22 +152,26 @@ export class ProjectsService {
       count: row.count,
     }));
 
-    logger.info("Project stats fetched", { projectId, userId });
+    logger.info("Project stats fetched", { projectId, userId: ctx.userId });
 
     return { byStatus, byAssignee };
   }
 
   async updateProject(
-    userId: string,
+    ctx: ProjectAccessContext,
     projectId: string,
     input: UpdateProjectInput,
   ): Promise<Project> {
-    const project = await this.projectsRepository.findById(projectId);
-    if (!project) {
-      throw new AppError("not found", 404);
-    }
-    if (project.owner_id !== userId) {
-      throw new AppError("forbidden", 403);
+    await this.assertProjectAccess(ctx, projectId);
+
+    if (ctx.role !== UserRole.Admin) {
+      const isMember = await this.projectsRepository.isProjectMember(
+        ctx.userId,
+        projectId,
+      );
+      if (!isMember) {
+        throw new AppError("forbidden", 403);
+      }
     }
 
     const row = await this.projectsRepository.updateById(projectId, {
@@ -171,30 +182,106 @@ export class ProjectsService {
             ? null
             : String(input.description).trim()
           : undefined,
+      status: input.status,
     });
 
     if (!row) {
       throw new AppError("not found", 404);
     }
 
-    logger.info("Project updated", { projectId, ownerId: userId });
+    logger.info("Project updated", { projectId, userId: ctx.userId });
     return this.toProject(row);
   }
 
-  async deleteProject(userId: string, projectId: string): Promise<void> {
-    const project = await this.projectsRepository.findById(projectId);
-    if (!project) {
-      throw new AppError("not found", 404);
-    }
-    if (project.owner_id !== userId) {
-      throw new AppError("forbidden", 403);
-    }
+  async deleteProject(
+    ctx: ProjectAccessContext,
+    projectId: string,
+  ): Promise<void> {
+    await this.assertProjectInTenant(projectId, ctx.tenantId);
 
     const deleted = await this.projectsRepository.deleteById(projectId);
     if (!deleted) {
       throw new AppError("not found", 404);
     }
 
-    logger.info("Project deleted", { projectId, ownerId: userId });
+    logger.info("Project deleted", { projectId, userId: ctx.userId });
+  }
+
+  async addProjectMember(
+    ctx: ProjectAccessContext,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.assertProjectInTenant(projectId, ctx.tenantId);
+
+    const userInTenant = await this.projectsRepository.userInTenant(
+      userId,
+      ctx.tenantId,
+    );
+    if (!userInTenant) {
+      throw new AppError("user not in tenant", 404);
+    }
+
+    await this.projectsRepository.addMember(projectId, userId);
+    logger.info("Project member added", { projectId, userId, adminId: ctx.userId });
+  }
+
+  async listProjectMembers(
+    ctx: ProjectAccessContext,
+    projectId: string,
+  ): Promise<ProjectMember[]> {
+    await this.assertProjectAccess(ctx, projectId);
+
+    const rows = await this.projectsRepository.listMembers(projectId);
+    return rows.map((row) => ({
+      userId: row.user_id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      joinedAt: row.joined_at,
+    }));
+  }
+
+  async removeProjectMember(
+    ctx: ProjectAccessContext,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.assertProjectInTenant(projectId, ctx.tenantId);
+
+    const removed = await this.projectsRepository.removeMember(
+      projectId,
+      userId,
+    );
+    if (!removed) {
+      throw new AppError("not found", 404);
+    }
+
+    logger.info("Project member removed", {
+      projectId,
+      userId,
+      adminId: ctx.userId,
+    });
+  }
+
+  async canUserDeleteTask(
+    ctx: ProjectAccessContext,
+    projectId: string,
+    createdBy: string,
+  ): Promise<boolean> {
+    if (ctx.role === UserRole.Admin) {
+      return this.projectsRepository.canUserAccessProject(
+        ctx.userId,
+        ctx.tenantId,
+        ctx.role,
+        projectId,
+      );
+    }
+
+    if (createdBy !== ctx.userId) {
+      return false;
+    }
+
+    return this.projectsRepository.isProjectMember(ctx.userId, projectId);
   }
 }

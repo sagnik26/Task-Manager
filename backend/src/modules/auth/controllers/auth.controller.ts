@@ -86,6 +86,27 @@ export class AuthController {
     }
   }
 
+  async getPermissions(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const role = req.user?.role;
+      if (!role) {
+        res.status(401).json({ error: "unauthorized" });
+        return;
+      }
+
+      const flags = this.authService.getPermissions(role);
+      res
+        .status(200)
+        .json(ResponseFormatter.success(flags, "Permissions fetched"));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       this.clearAuthCookie(res);

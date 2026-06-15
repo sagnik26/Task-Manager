@@ -38,6 +38,8 @@ On platforms like Render or Railway, set:
 - **Start command:** `npm run migrate && npm start`  
   (or run migrations in a release/deploy hook if your host supports it)
 
+**Railway:** Commit `backend/railway.json` and in the service **Settings → Config file** set `/backend/railway.json`. Connect GitHub for auto-deploy on push. Set env vars in the dashboard (not in `railway.json`). If using Supabase from Railway, you may need `ipv6EgressEnabled: true` in deploy settings (already set in the config file).
+
 ### Required environment variables
 
 | Variable | Required | Notes |

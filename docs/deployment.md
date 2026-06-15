@@ -156,7 +156,8 @@ You should get a JSON health payload. Check Railway deploy logs if migrations fa
 
 1. Import the repo at [vercel.com](https://vercel.com).
 2. Set **Root Directory** to `frontend`.
-3. Vercel auto-detects Next.js — no custom `vercel.json` required.
+3. Set **Framework Preset** to **Next.js**.
+4. Clear any **Output Directory** override — leave it blank so Vercel uses the Next.js default. The repo includes `frontend/vercel.json` with `"framework": "nextjs"` to enforce this on deploy.
 
 ### Connect to Railway
 
@@ -235,6 +236,7 @@ This mirrors the local stack (Next.js `/api` proxy → backend → Postgres) des
 | Railway cannot reach Supabase | IPv4-only egress | Confirm `ipv6EgressEnabled: true` in `backend/railway.json` |
 | SSL / connection errors | Supabase requires TLS | Add `?sslmode=require` to `DATABASE_URL` |
 | Migrations fail | Wrong `DATABASE_URL` | Run `npm run migrate` locally with the same URI to debug |
+| Build fails: no `dist` output directory | Stale Vercel settings from Vite | Set Framework Preset to **Next.js**, clear Output Directory override, redeploy |
 | `/api/...` returns HTML or 404 | Vercel proxy not set | Set `BACKEND_PROXY_URL=https://task-manager-production-8310.up.railway.app` on Vercel |
 | Login works locally, fails in prod | Railway unreachable | `curl https://task-manager-production-8310.up.railway.app/health` |
 | 401 after login | Cookie not sent cross-origin | Use `/api` proxy on Vercel (do not set `NEXT_PUBLIC_API_URL`) |

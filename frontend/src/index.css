@@ -641,6 +641,13 @@ textarea {
   min-width: 0;
 }
 
+.profile-menu__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .profile-menu__name {
   font-size: 13px;
   font-weight: 600;
@@ -648,9 +655,15 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.profile-menu__role {
+  flex-shrink: 0;
 }
 
 .profile-menu__email {
+  margin-top: 4px;
   font-size: 12px;
   color: var(--secondary);
   white-space: nowrap;

@@ -2,6 +2,13 @@
 
 TaskFlow is a multitenant task management application for teams. Users register, sign in, manage projects, and work with tasks through the frontend UI. Admins control tenant users and project membership; developers work within projects they belong to.
 
+### Test accounts
+
+| Email | Role | Password | Access |
+| ----- | ---- | -------- | ------ |
+| `test@example.com` | **admin** | `password123` | All tenant projects; create/delete projects; manage users & project members; full task CRUD |
+| `nikg26@gmail.com` | **developer** | `password123` | Member projects only; create/edit/delete tasks in those projects; no create project, no Users page |
+
 ## 🚀 Features
 
 - **Authentication & sessions**: Register and login with JWT; session via `authToken` cookie or `Authorization: Bearer` header
@@ -38,7 +45,7 @@ Single-workspace MVP today — multitenancy is in the schema, but everyone uses 
 - **One tenant** — no tenant picker; all auth flows use the default slug
 - **Two roles** — `admin` and `developer` only
 - **Register → developer** — signups never create an admin
-- **Admins via seed/ops** — first admin comes from `seed.sql`, not self-registration
+- **Admins via seed/ops** — test users (`admin` + `developer`) come from `seed.sql`, not self-registration
 
 ### Future scope
 
@@ -299,13 +306,7 @@ docker compose up --build
 
 #### Test credentials (after seed):
 
-
-|              |                      |
-| ------------ | -------------------- |
-| **Email**    | `test@example.com`   |
-| **Password** | `password123`        |
-| **Tenant**   | `taskflow` (default) |
-| **Role**     | `admin`              |
+See [Test accounts](#test-accounts-existing-db-users) at the top of this README — `test@example.com` (admin) and `nikg26@gmail.com` (developer), both `password123`.
 
 
 ### Manual setup (alternative)

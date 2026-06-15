@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "taskflow-api-collection",
     "name": "TaskFlow API",
-    "description": "TaskFlow REST API. Set `baseUrl` (local: http://localhost:4000, prod: your Railway URL).\n\n**Auth:** Run **Login** or **Register** first — the test script saves `data.token` to `{{token}}`. Protected routes use Bearer `{{token}}`. The API also sets an `authToken` cookie (enable Postman cookies for cookie-based auth).\n\n**Seed user (after seed.sql):** `test@example.com` / `password123`",
+    "description": "TaskFlow REST API. Set `baseUrl` (local: http://localhost:4000, prod: your Railway URL).\n\n**Auth:** Run **Login** or **Register** first — the test script saves `data.token` to `{{token}}`. Protected routes use Bearer `{{token}}`. The API also sets an `authToken` cookie (enable Postman cookies for cookie-based auth).\n\n**Seed users (after seed.sql):** `test@example.com` / `password123` (admin), `nikg26@gmail.com` / `password123` (developer)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

@@ -3,9 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/modules/auth";
+import type { UserRole } from "@/modules/auth/types/auth.types";
 import { Avatar } from "../ui/Avatar";
 import { DarkModeToggle } from "../ui/DarkModeToggle";
 import { LogoIcon, LogoWordmark } from "../ui/Logo";
+
+function roleLabel(role: UserRole | undefined): string {
+  return role === "admin" ? "Admin" : "Developer";
+}
 
 export function Topbar() {
   const { user, logout } = useAuth();
@@ -73,7 +78,14 @@ export function Topbar() {
               <div className="profile-menu__header">
                 <Avatar name={user?.name ?? "User"} seed={user?.id} size={36} />
                 <div className="profile-menu__meta">
-                  <div className="profile-menu__name">{user?.name ?? "User"}</div>
+                  <div className="profile-menu__name-row">
+                    <div className="profile-menu__name">{user?.name ?? "User"}</div>
+                    {user?.role ? (
+                      <span className={`users-badge users-badge--${user.role} profile-menu__role`}>
+                        {roleLabel(user.role)}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="profile-menu__email">{user?.email ?? ""}</div>
                 </div>
               </div>

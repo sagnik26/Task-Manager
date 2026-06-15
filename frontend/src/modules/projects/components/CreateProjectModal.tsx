@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 
-import { toApiError } from "../../../shared/utils/apiErrors";
+import { toApiError } from "@/shared/utils/apiErrors";
 
 export type CreateProjectValues = {
   name: string;

@@ -3,7 +3,7 @@ import { Check, X } from "lucide-react";
 import {
   SORT_OPTIONS,
   type SortField,
-} from "../../../shared/theme/design";
+} from "@/shared/theme/design";
 
 export type SortState = {
   sortBy: SortField;

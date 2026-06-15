@@ -1,5 +1,5 @@
-import { useAuthStore } from "../../../store";
-import type { PermissionCanFlags } from "../../../types/auth";
+import { useAuthStore } from "@/modules/auth/context/auth.store";
+import type { PermissionCanFlags } from "@/modules/auth/types/auth.types";
 
 export function useAuthPermissions() {
   const permissions = useAuthStore((s) => s.permissions);

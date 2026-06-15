@@ -1,6 +1,6 @@
 import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 
-import type { TaskStatus } from "../../../types/tasks";
+import type { TaskStatus } from "@/modules/tasks/types/tasks.types";
 
 export type TaskAssigneeFilter = "all" | "me" | "unassigned";
 

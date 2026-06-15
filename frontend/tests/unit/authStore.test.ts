@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { useAuthStore } from "../../src/store";
-import type { PermissionFlags, User } from "../../src/types/auth";
+import { useAuthStore } from "@/modules/auth/context/auth.store";
+import type { PermissionFlags, User } from "@/modules/auth/types/auth.types";
 
 const sampleUser: User = {
   id: "user-1",

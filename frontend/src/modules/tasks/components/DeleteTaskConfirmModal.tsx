@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-import { toApiError } from "../../../shared/utils/apiErrors";
-import type { Task } from "../../../types/tasks";
+import { toApiError } from "@/shared/utils/apiErrors";
+import type { Task } from "@/modules/tasks/types/tasks.types";
 
 export function DeleteTaskConfirmModal({
   open,
@@ -27,6 +27,7 @@ export function DeleteTaskConfirmModal({
   if (!open || !task) return null;
 
   async function handleConfirm() {
+    if (!task) return;
     setSubmitError(null);
     try {
       setSubmitting(true);

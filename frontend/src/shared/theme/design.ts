@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from "../../types/tasks";
+import type { TaskPriority, TaskStatus } from "@/modules/tasks/types/tasks.types";
 import { normalizeDueDate } from "../utils/dates";
 
 export const BRAND = {

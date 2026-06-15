@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 
-import { AuthContextProvider } from "../../modules/auth/context/AuthContext";
-import { useAuth } from "../../modules/auth/context/useAuth";
+import { AuthContextProvider, useAuth } from "@/modules/auth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (

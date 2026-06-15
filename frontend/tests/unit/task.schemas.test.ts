@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { taskUpsertSchema } from "../../src/modules/tasks/task.schemas";
+import { taskUpsertSchema } from "@/modules/tasks/schemas/task.schemas";
 
 const validTask = {
   title: "Review PR",

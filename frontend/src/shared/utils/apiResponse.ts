@@ -1,4 +1,4 @@
-import type { BackendSuccessResponse } from "../../types";
+import type { BackendSuccessResponse } from "@/shared/types/api.types";
 
 export function extractResponseData<T>(payload: unknown): T {
   if (

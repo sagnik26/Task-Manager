@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
-import { useAuth } from "../../modules/auth/context/useAuth.ts";
+import { useAuth } from "@/modules/auth";
 import { LoadingState } from "../ui/LoadingState";
 
 export function ProtectedRoute({ children }: { children?: ReactNode }) {

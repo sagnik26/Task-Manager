@@ -1,5 +1,5 @@
-import { useAuthPermissions } from "../../modules/auth/context/useAuthPermissions";
-import type { PermissionCanFlags } from "../../types/auth";
+import { useAuthPermissions } from "@/modules/auth";
+import type { PermissionCanFlags } from "@/modules/auth/types/auth.types";
 
 export function usePermission(action: string): boolean {
   const { permissions } = useAuthPermissions();

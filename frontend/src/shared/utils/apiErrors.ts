@@ -1,6 +1,6 @@
 import type { AxiosError } from "axios";
 
-import type { ApiError, BackendErrorBody, BackendFieldErrors } from "../../types";
+import type { ApiError, BackendErrorBody, BackendFieldErrors } from "@/shared/types/api.types";
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

@@ -1,7 +1,7 @@
 import { createContext } from "react";
 
 import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
-import type { AuthSession } from "../../../types/auth";
+import type { AuthSession } from "@/modules/auth/types/auth.types";
 
 export type AuthContextValue = AuthSession & {
   isAuthenticated: boolean;

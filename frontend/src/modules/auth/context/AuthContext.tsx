@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { useAuthStore } from "../../../store";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
+import * as authApi from "@/modules/auth/api/auth.api";
+import { useAuthStore } from "@/modules/auth/context/auth.store";
+import type { LoginInput, RegisterInput } from "@/modules/auth/schemas/auth.schemas";
+import { toApiError } from "@/shared/utils/apiErrors";
 import { AuthContext, type AuthContextValue } from "./auth.context";
-import * as authApi from "../../../api/auth.api";
-import { toApiError } from "../../../shared/utils/apiErrors";
 
 export function AuthContextProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);

@@ -4,10 +4,10 @@ import {
   PRIORITY_META,
   TASK_STATUS_COLUMNS,
   formatDueDate,
-} from "../../../shared/theme/design";
-import { Avatar } from "../../../shared/ui/Avatar";
-import type { ProjectMember } from "../../../api/projects.api";
-import type { Task } from "../../../types/tasks";
+} from "@/shared/theme/design";
+import { Avatar } from "@/shared/ui/Avatar";
+import type { ProjectMember } from "@/modules/projects/types/projects.types";
+import type { Task } from "@/modules/tasks/types/tasks.types";
 
 function resolveAssigneeLabel(
   assigneeId: string,

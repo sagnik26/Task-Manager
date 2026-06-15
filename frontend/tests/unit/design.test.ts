@@ -8,7 +8,7 @@ import {
   projectVisuals,
   sortTasks,
 } from "../../src/shared/theme/design";
-import type { TaskPriority } from "../../src/types/tasks";
+import type { TaskPriority } from "@/modules/tasks/types/tasks.types";
 
 describe("initialsFromName", () => {
   it("derives initials from one or more name parts", () => {

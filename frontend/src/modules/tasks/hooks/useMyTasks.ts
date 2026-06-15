@@ -1,13 +1,15 @@
 import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 
-import { listProjects } from "../../../api/projects.api";
-import { listTasks } from "../../../api/tasks.api";
-import type { AssignedTask } from "../../../types/tasks";
+import { projectKeys } from "@/modules/projects/api/query-keys";
+import { listProjects } from "@/modules/projects/api/projects.api";
+import { listTasks } from "@/modules/tasks/api/tasks.api";
+import { taskKeys } from "@/modules/tasks/api/query-keys";
+import type { AssignedTask } from "@/modules/tasks/types/tasks.types";
 
 export function useMyTasks(userId: string | undefined) {
   const projectsQuery = useQuery({
-    queryKey: ["projects"],
+    queryKey: projectKeys.all,
     queryFn: listProjects,
     enabled: Boolean(userId),
   });
@@ -16,7 +18,7 @@ export function useMyTasks(userId: string | undefined) {
 
   const taskQueries = useQueries({
     queries: projects.map((project) => ({
-      queryKey: ["tasks", project.id, "assignee", userId],
+      queryKey: taskKeys.byAssignee(project.id, userId ?? ""),
       queryFn: () => listTasks(project.id, { assignee: userId }),
       enabled: Boolean(userId),
     })),

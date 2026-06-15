@@ -9,7 +9,7 @@ import {
   isQueryActive,
   isSortActive,
 } from "../../src/modules/tasks/utils/applyTaskQuery";
-import type { Task } from "../../src/types/tasks";
+import type { Task } from "@/modules/tasks/types/tasks.types";
 
 const sampleTasks: Task[] = [
   {

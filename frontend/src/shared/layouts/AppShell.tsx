@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { CreateProjectModal } from "../../modules/projects/components/CreateProjectModal";
-import type { CreateProjectValues } from "../../modules/projects/components/CreateProjectModal";
-import { createProject } from "../../api/projects.api";
-import { useCan } from "../permissions/usePermission";
+import {
+  CreateProjectModal,
+  useCreateProject,
+  type CreateProjectValues,
+} from "@/modules/projects";
+import { useCan } from "@/shared/permissions/usePermission";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -15,15 +16,8 @@ export type AppShellContext = {
 
 export function AppShell() {
   const [modalOpen, setModalOpen] = useState(false);
-  const queryClient = useQueryClient();
+  const createMutation = useCreateProject();
   const canCreateProject = useCan("createProject");
-
-  const createMutation = useMutation({
-    mutationFn: createProject,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
-    },
-  });
 
   async function onCreate(values: CreateProjectValues) {
     await createMutation.mutateAsync({

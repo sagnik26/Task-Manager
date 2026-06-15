@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import type { Task, TaskStatus } from "../../../types/tasks";
+import type { Task, TaskStatus } from "@/modules/tasks/types/tasks.types";
 
 function priorityColor(
   priority: Task["priority"],

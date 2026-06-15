@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { handleAuthFormError } from "../../src/shared/utils/authFormErrors";
+import { handleAuthFormError } from "@/modules/auth/utils/authFormErrors";
 
 function axiosError(status: number, data?: unknown) {
   return {

@@ -1,10 +1,10 @@
-import { sortTasks } from "../../../shared/theme/design";
+import { sortTasks } from "@/shared/theme/design";
 import {
   DEFAULT_TASK_FILTERS,
   type TaskFilterState,
 } from "../components/FilterPanel";
 import { DEFAULT_SORT, type SortState } from "../components/SortPanel";
-import type { Task } from "../../../types/tasks";
+import type { Task } from "@/modules/tasks/types/tasks.types";
 
 export type TaskQueryState = TaskFilterState & SortState;
 

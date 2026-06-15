@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { useAuthStore } from "../../store";
+import { useAuthStore } from "@/modules/auth/context/auth.store";
 
 /**
  * Axios instance for TaskFlow API.

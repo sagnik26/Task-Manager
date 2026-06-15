@@ -1,10 +1,9 @@
 import { CheckSquare, Home, Plus, Users } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 
-import { listProjects } from "../../api/projects.api";
-import { Can } from "../permissions/Can";
-import { projectVisuals } from "../theme/design";
+import { useProjects } from "@/modules/projects";
+import { Can } from "@/shared/permissions/Can";
+import { projectVisuals } from "@/shared/theme/design";
 
 export function Sidebar({
   onNewProject,
@@ -12,10 +11,7 @@ export function Sidebar({
   onNewProject: () => void;
 }) {
   const location = useLocation();
-  const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: listProjects,
-  });
+  const projectsQuery = useProjects();
 
   const projects = projectsQuery.data ?? [];
   const isDashboard =

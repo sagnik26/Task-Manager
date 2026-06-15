@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 
-import { toApiError } from "../../../shared/utils/apiErrors";
-import { toDateInputValue } from "../../../shared/utils/dates";
-import { TASK_STATUS_COLUMNS, PRIORITY_META } from "../../../shared/theme/design";
-import { taskUpsertSchema } from "../task.schemas";
-import type { ProjectMember } from "../../../api/projects.api";
-import type { Task, TaskPriority, TaskStatus } from "../../../types/tasks";
+import { toApiError } from "@/shared/utils/apiErrors";
+import { toDateInputValue } from "@/shared/utils/dates";
+import { TASK_STATUS_COLUMNS, PRIORITY_META } from "@/shared/theme/design";
+import { taskUpsertSchema } from "@/modules/tasks/schemas/task.schemas";
+import type { ProjectMember } from "@/modules/projects/types/projects.types";
+import type { Task, TaskPriority, TaskStatus } from "@/modules/tasks/types/tasks.types";
 
 type TaskDraft = {
   title: string;

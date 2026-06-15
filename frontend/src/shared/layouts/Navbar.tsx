@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { Outlet, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../../modules/auth/context/useAuth.ts";
+import { useAuth } from "@/modules/auth";
 
 export function Navbar() {
   const { user, logout } = useAuth();

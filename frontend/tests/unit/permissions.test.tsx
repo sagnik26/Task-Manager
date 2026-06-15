@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { Can } from "../../src/shared/permissions/Can";
 import { useCan, usePermission } from "../../src/shared/permissions/usePermission";
-import { useAuthStore } from "../../src/store";
-import type { PermissionFlags } from "../../src/types/auth";
+import { useAuthStore } from "@/modules/auth/context/auth.store";
+import type { PermissionFlags } from "@/modules/auth/types/auth.types";
 
 function PermissionProbe({
   action,

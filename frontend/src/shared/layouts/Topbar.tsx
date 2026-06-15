@@ -2,7 +2,7 @@ import { LogOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useAuth } from "../../modules/auth/context/useAuth";
+import { useAuth } from "@/modules/auth";
 import { Avatar } from "../ui/Avatar";
 import { DarkModeToggle } from "../ui/DarkModeToggle";
 import { LogoIcon, LogoWordmark } from "../ui/Logo";

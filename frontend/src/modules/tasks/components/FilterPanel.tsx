@@ -1,10 +1,10 @@
 import { Check, X } from "lucide-react";
 import { useMemo } from "react";
 
-import type { ProjectMember } from "../../../api/projects.api";
-import { PRIORITY_META, TASK_STATUS_COLUMNS } from "../../../shared/theme/design";
-import { Avatar } from "../../../shared/ui/Avatar";
-import type { Task, TaskPriority, TaskStatus } from "../../../types/tasks";
+import type { ProjectMember } from "@/modules/projects/types/projects.types";
+import { PRIORITY_META, TASK_STATUS_COLUMNS } from "@/shared/theme/design";
+import { Avatar } from "@/shared/ui/Avatar";
+import type { Task, TaskPriority, TaskStatus } from "@/modules/tasks/types/tasks.types";
 
 const BASE_ASSIGNEE_OPTIONS = [
   { id: "me", name: "Me" },

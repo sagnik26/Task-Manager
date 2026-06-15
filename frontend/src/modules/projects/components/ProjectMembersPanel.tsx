@@ -6,13 +6,15 @@ import {
   addProjectMember,
   listProjectMembers,
   removeProjectMember,
-  type ProjectMember,
-} from "../../../api/projects.api";
-import { listUsers } from "../../../api/users.api";
-import { Avatar } from "../../../shared/ui/Avatar";
-import { LoadingState } from "../../../shared/ui/LoadingState";
-import { toApiError } from "../../../shared/utils/apiErrors";
-import type { TenantUser } from "../../../types/users";
+} from "@/modules/projects/api/projects.api";
+import { projectKeys } from "@/modules/projects/api/query-keys";
+import type { ProjectMember } from "@/modules/projects/types/projects.types";
+import { listUsers } from "@/modules/users/api/users.api";
+import { userKeys } from "@/modules/users/api/query-keys";
+import { Avatar } from "@/shared/ui/Avatar";
+import { LoadingState } from "@/shared/ui/LoadingState";
+import { toApiError } from "@/shared/utils/apiErrors";
+import type { TenantUser } from "@/modules/users/types/users.types";
 
 export function ProjectMembersPanel({
   projectId,
@@ -26,13 +28,13 @@ export function ProjectMembersPanel({
   const [actionError, setActionError] = useState<string | null>(null);
 
   const membersQuery = useQuery({
-    queryKey: ["project-members", projectId],
+    queryKey: projectKeys.members(projectId),
     queryFn: () => listProjectMembers(projectId),
     enabled: Boolean(projectId),
   });
 
   const usersQuery = useQuery({
-    queryKey: ["users"],
+    queryKey: userKeys.all,
     queryFn: listUsers,
   });
 
@@ -41,8 +43,8 @@ export function ProjectMembersPanel({
     onSuccess: async () => {
       setSelectedUserId("");
       setActionError(null);
-      await queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: projectKeys.members(projectId) });
+      await queryClient.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (error) => setActionError(toApiError(error).message),
   });
@@ -51,8 +53,8 @@ export function ProjectMembersPanel({
     mutationFn: (userId: string) => removeProjectMember(projectId, userId),
     onSuccess: async () => {
       setActionError(null);
-      await queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: projectKeys.members(projectId) });
+      await queryClient.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (error) => setActionError(toApiError(error).message),
   });

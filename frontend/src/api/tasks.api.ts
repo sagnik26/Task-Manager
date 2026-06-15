@@ -3,10 +3,26 @@ import { normalizeDueDate } from "../shared/utils/dates";
 import { extractResponseData } from "../shared/utils/apiResponse";
 import type { Task, TaskPriority, TaskStatus } from "../types";
 
-function normalizeTask(task: Task): Task {
+type RawTask = Task & {
+  assignee_id?: string | null;
+  due_date?: string | null;
+  project_id?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+function normalizeTask(task: RawTask): Task {
   return {
-    ...task,
-    dueDate: normalizeDueDate(task.dueDate),
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    assigneeId: task.assigneeId ?? task.assignee_id ?? null,
+    projectId: task.projectId ?? task.project_id,
+    dueDate: normalizeDueDate(task.dueDate ?? task.due_date),
+    createdAt: task.createdAt ?? task.created_at ?? null,
+    updatedAt: task.updatedAt ?? task.updated_at ?? null,
   };
 }
 

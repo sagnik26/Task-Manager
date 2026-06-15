@@ -6,18 +6,31 @@ import {
   formatDueDate,
 } from "../../../shared/theme/design";
 import { Avatar } from "../../../shared/ui/Avatar";
+import type { ProjectMember } from "../../../api/projects.api";
 import type { Task, TaskStatus } from "../../../types/tasks";
+
+function resolveAssigneeLabel(
+  assigneeId: string,
+  currentUserId: string,
+  userName: string,
+  members: ProjectMember[],
+): string {
+  if (assigneeId === currentUserId) return userName;
+  return members.find((member) => member.userId === assigneeId)?.name ?? "Assigned";
+}
 
 export function KanbanBoard({
   tasks,
   currentUserId,
   userName,
+  assignees = [],
   onAddTask,
   onEditTask,
 }: {
   tasks: Task[];
   currentUserId: string;
   userName: string;
+  assignees?: ProjectMember[];
   onAddTask: (status: TaskStatus) => void;
   onEditTask: (task: Task) => void;
 }) {
@@ -49,7 +62,7 @@ export function KanbanBoard({
             <div className="kanban-column__list">
               {columnTasks.map((task) => {
                 const pm = PRIORITY_META[task.priority];
-                const isAssignedToMe = task.assigneeId === currentUserId;
+                const assigneeId = task.assigneeId;
 
                 return (
                   <div
@@ -80,8 +93,17 @@ export function KanbanBoard({
                             {formatDueDate(task.dueDate)}
                           </span>
                         ) : null}
-                        {isAssignedToMe ? (
-                          <Avatar name={userName} seed={currentUserId} size={20} />
+                        {assigneeId ? (
+                          <Avatar
+                            name={resolveAssigneeLabel(
+                              assigneeId,
+                              currentUserId,
+                              userName,
+                              assignees,
+                            )}
+                            seed={assigneeId}
+                            size={20}
+                          />
                         ) : null}
                       </div>
                     </div>

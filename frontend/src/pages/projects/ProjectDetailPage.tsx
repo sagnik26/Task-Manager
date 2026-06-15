@@ -419,6 +419,7 @@ export function ProjectDetailPage() {
               tasks={filtered}
               currentUserId={currentUserId}
               userName={userName}
+              assignees={membersQuery.data ?? []}
               onAddTask={openCreateTask}
               onEditTask={(task) => {
                 setTaskModalMode("edit");

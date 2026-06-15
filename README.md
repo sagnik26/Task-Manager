@@ -1,6 +1,6 @@
-# TaskFlow - Full-Stack Task Management
+# TaskManager - Full-Stack Task Management
 
-TaskFlow is a multitenant task management application for teams. Users register, sign in, manage projects, and work with tasks through the frontend UI. Admins control tenant users and project membership; developers work within projects they belong to.
+TaskManager is a multitenant task management application for teams. Users register, sign in, manage projects, and work with tasks through the frontend UI. Admins control tenant users and project membership; developers work within projects they belong to.
 
 https://github.com/user-attachments/assets/18d71baf-80d1-4fc1-8f1d-293cb1556965
 
@@ -38,7 +38,7 @@ https://github.com/user-attachments/assets/18d71baf-80d1-4fc1-8f1d-293cb1556965
 
 ## 🏗 Architecture
 
-TaskFlow is a three-tier, modular monolith: a React SPA talks to an Express API over REST; the API persists data in PostgreSQL with tenant-scoped RBAC.
+TaskManager is a three-tier, modular monolith: a React SPA talks to an Express API over REST; the API persists data in PostgreSQL with tenant-scoped RBAC.
 
 ### Assumptions
 
@@ -121,7 +121,7 @@ sequenceDiagram
 
 ### Database design
 
-TaskFlow uses a **multitenant** relational schema. Every user and project belongs to a **tenant**. Project access is granted through `**project_members`** (many-to-many). Users carry a tenant **role** (`admin` | `developer`) that drives RBAC.
+TaskManager uses a **multitenant** relational schema. Every user and project belongs to a **tenant**. Project access is granted through `**project_members`** (many-to-many). Users carry a tenant **role** (`admin` | `developer`) that drives RBAC.
 
 ```mermaid
 erDiagram
@@ -430,7 +430,7 @@ taskflow-sagnik-ghosh/
 
 ## 🖥 Frontend
 
-React + TypeScript + Vite SPA for the TaskFlow project management UI.
+React + TypeScript + Vite SPA for the TaskManager project management UI.
 
 ### Pages vs modules
 

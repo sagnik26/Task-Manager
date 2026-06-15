@@ -2,22 +2,14 @@
 
 TaskFlow is a multitenant task management application for teams. Users register, sign in, manage projects, and work with tasks through the frontend UI. Admins control tenant users and project membership; developers work within projects they belong to.
 
+https://github.com/user-attachments/assets/18d71baf-80d1-4fc1-8f1d-293cb1556965
+
 ### Test accounts
 
 | Email | Role | Password | Access |
 | ----- | ---- | -------- | ------ |
 | `test@example.com` | **admin** | `password123` | All tenant projects; create/delete projects; manage users & project members; full task CRUD |
 | `nikg26@gmail.com` | **developer** | `password123` | Member projects only; create/edit/delete tasks in those projects; no create project, no Users page |
-
-
-
-
-
-https://github.com/user-attachments/assets/18d71baf-80d1-4fc1-8f1d-293cb1556965
-
-
-
-
 
 ## 🚀 Features
 

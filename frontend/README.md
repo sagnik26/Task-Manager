@@ -38,20 +38,21 @@ frontend/
 └── tsconfig.app.json
 ```
 
-### Module skeleton (same for every feature)
+### Module layout
+
+Each module keeps domain code together. Add folders only when the module needs them:
 
 ```
 modules/<feature>/
 ├── index.ts          # public barrel exports
 ├── api/              # HTTP + query-keys.ts
 ├── types/
-├── schemas/
 ├── hooks/
 ├── components/
 ├── screens/          # full page UI (used by pages/*)
-├── utils/
-├── constants/
-└── context/
+├── schemas/          # optional — zod/form validation
+├── utils/            # optional — helpers (e.g. optimistic cache)
+└── context/          # optional — only auth uses this today
 ```
 
 | Module     | Screens                         | Notes                                      |
@@ -63,7 +64,7 @@ modules/<feature>/
 
 ### Client state vs server state
 
-Not every module needs a Zustand store or React context. Modules share the same **folder** layout (`context/` exists everywhere), but only **auth** fills `context/` with a real provider because it owns **global session state**. The other modules load **server data** through TanStack Query and keep short-lived UI state in component `useState`.
+Not every module needs a Zustand store or React context. Only **auth** has a `context/` provider because it owns **global session state**. Other modules load **server data** through TanStack Query and keep short-lived UI state in component `useState`.
 
 | Module     | Primary state        | Where it lives | Why |
 |------------|----------------------|----------------|-----|
@@ -77,8 +78,6 @@ Not every module needs a Zustand store or React context. Modules share the same 
 - **Client state (store / context)** — data or behavior needed **across the whole app**, **after navigation**, or **outside React**. Only auth qualifies today.
 - **Server state (React Query)** — data that **lives on the backend** (projects, tasks, users). Fetched via `modules/*/api/`, cached with query keys, updated with mutations + `invalidateQueries`.
 - **Local state (`useState`)** — **UI-only** and **short-lived** (form inputs before submit, which modal is open, filter panel drafts). Stays in hooks, components, or screens; not in a global store.
-
-`context/index.ts` under `projects`, `tasks`, and `users` is a structural placeholder. Add a real provider there only when a module gains **global client-owned** state that React Query cannot represent (e.g. a cross-route WebSocket or app-wide draft).
 
 ### Optimistic mutations
 
@@ -98,7 +97,7 @@ Mutations update the React Query cache **immediately** (`onMutate`), roll back o
 
 Related caches (e.g. `projectKeys.stats`, `taskKeys.byAssignee` for My Tasks) are **invalidated on settled**, not patched optimistically.
 
-**Modal UX:** create/edit/delete modals call `mutate()` and close immediately; the list/board updates optimistically behind them. API failures roll back the cache and surface on page-level error banners (`tasksActionError`, `deleteError`, `createError`), not inside the modal.
+**Modal UX:** create/edit/delete modals call `mutate()` and close immediately; the list/board updates optimistically behind them. API failures roll back the cache and surface as **toasts** via `useToast()` (`shared/ui/toast/`), not inline banners or inside the modal.
 
 ### Import rules
 

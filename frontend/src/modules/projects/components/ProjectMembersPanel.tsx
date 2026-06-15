@@ -11,6 +11,7 @@ import { listUsers } from "@/modules/users/api/users.api";
 import { userKeys } from "@/modules/users/api/query-keys";
 import { Avatar } from "@/shared/ui/Avatar";
 import { LoadingState } from "@/shared/ui/LoadingState";
+import { useToast } from "@/shared/ui/toast";
 import type { TenantUser } from "@/modules/users/types/users.types";
 
 export function ProjectMembersPanel({
@@ -21,7 +22,7 @@ export function ProjectMembersPanel({
   onClose: () => void;
 }) {
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [actionError, setActionError] = useState<string | null>(null);
+  const toast = useToast();
 
   const membersQuery = useQuery({
     queryKey: projectKeys.members(projectId),
@@ -37,13 +38,12 @@ export function ProjectMembersPanel({
   const addMutation = useAddProjectMember(projectId, {
     onSuccess: () => {
       setSelectedUserId("");
-      setActionError(null);
     },
-    onError: (message) => setActionError(message),
+    onError: (message) => toast.error(message),
   });
 
   const removeMutation = useRemoveProjectMember(projectId, {
-    onError: (message) => setActionError(message),
+    onError: (message) => toast.error(message),
   });
 
   const members = membersQuery.data ?? [];
@@ -86,12 +86,6 @@ export function ProjectMembersPanel({
       </div>
 
       <div className="filter-panel__body">
-        {actionError ? (
-          <div className="alert-error" style={{ marginBottom: 12 }}>
-            {actionError}
-          </div>
-        ) : null}
-
         <div className="filter-section">
           <h4 className="filter-section__label">Add member</h4>
           <div style={{ display: "flex", gap: 8 }}>

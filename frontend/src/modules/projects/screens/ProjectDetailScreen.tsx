@@ -36,6 +36,7 @@ import {
 } from "@/modules/tasks/components/SortPanel";
 import { TaskModal } from "@/modules/tasks/components/TaskModal";
 import { DeleteConfirmModal } from "@/shared/ui/DeleteConfirmModal";
+import { useToast } from "@/shared/ui/toast";
 import {
   buildOptimisticTaskPayload,
   useCreateTask,
@@ -77,21 +78,20 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
   const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
   const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
-  const [tasksActionError, setTasksActionError] = useState<string | null>(null);
-  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(null);
+  const toast = useToast();
 
   const updateTaskMutation = useUpdateTask(projectId, {
-    onError: (message) => setTasksActionError(message),
+    onError: (message) => toast.error(message),
   });
   const createTaskMutation = useCreateTask(projectId, {
-    onError: (message) => setTasksActionError(message),
+    onError: (message) => toast.error(message),
   });
   const deleteTaskMutation = useDeleteTask(projectId, {
-    onError: (message) => setTasksActionError(message),
+    onError: (message) => toast.error(message),
   });
   const deleteProjectMutation = useDeleteProject({
     onSuccess: () => navigate("/projects"),
-    onError: (message) => setDeleteProjectError(message),
+    onError: (message) => toast.error(message),
   });
 
   const projectQuery = useQuery({
@@ -225,7 +225,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
   }
 
   function handleSaveTask(next: Omit<Task, "id">, existingId?: string) {
-    setTasksActionError(null);
     if (existingId) {
       updateTaskMutation.mutate({ taskId: existingId, patch: next });
       return;
@@ -241,7 +240,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
   }
 
   function openDeleteProjectModal() {
-    setDeleteProjectError(null);
     setDeleteProjectModalOpen(true);
   }
 
@@ -317,17 +315,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
             </button>
           </Can>
         </div>
-
-        {tasksActionError ? (
-          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
-            {tasksActionError}
-          </div>
-        ) : null}
-        {deleteProjectError ? (
-          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
-            {deleteProjectError}
-          </div>
-        ) : null}
 
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
           {tasksQuery.isLoading ? (
@@ -421,7 +408,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
         onClose={() => setTaskPendingDelete(null)}
         onConfirm={() => {
           if (!taskPendingDelete) return;
-          setTasksActionError(null);
           deleteTaskMutation.mutate(taskPendingDelete.id);
         }}
       />
@@ -434,7 +420,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
         confirmLabel="Delete project"
         onClose={() => setDeleteProjectModalOpen(false)}
         onConfirm={() => {
-          setDeleteProjectError(null);
           deleteProjectMutation.mutate(project.id);
         }}
       />

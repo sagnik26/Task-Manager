@@ -8,6 +8,7 @@ import {
   type CreateProjectValues,
 } from "@/modules/projects";
 import { useCan } from "@/shared/permissions/usePermission";
+import { useToast } from "@/shared/ui/toast";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -17,14 +18,13 @@ export type AppShellContext = {
 
 export function AppShell() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const toast = useToast();
   const createMutation = useCreateProject({
-    onError: (message) => setCreateError(message),
+    onError: (message) => toast.error(message),
   });
   const canCreateProject = useCan("createProject");
 
   function onCreate(values: CreateProjectValues) {
-    setCreateError(null);
     createMutation.mutate(
       buildOptimisticProjectPayload({
         name: values.name,
@@ -44,11 +44,6 @@ export function AppShell() {
       <div className="app-body">
         <Sidebar onNewProject={openNewProject} />
         <main className="main-content">
-          {createError ? (
-            <div className="alert-error" style={{ margin: "12px 24px 0" }}>
-              {createError}
-            </div>
-          ) : null}
           <Outlet context={{ openNewProject } satisfies AppShellContext} />
         </main>
       </div>

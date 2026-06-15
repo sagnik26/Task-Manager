@@ -14,6 +14,7 @@ import { getProjectStats, listProjects } from "@/modules/projects/api/projects.a
 import { projectKeys } from "@/modules/projects/api/query-keys";
 import { useDeleteProject } from "@/modules/projects/hooks/useDeleteProject";
 import { DeleteConfirmModal } from "@/shared/ui/DeleteConfirmModal";
+import { useToast } from "@/shared/ui/toast";
 import { useAuth } from "@/modules/auth";
 import { Can } from "@/shared/permissions/Can";
 import { useCan } from "@/shared/permissions/usePermission";
@@ -46,10 +47,10 @@ export function ProjectsListScreen() {
   const [projectPendingDelete, setProjectPendingDelete] = useState<Project | null>(
     null,
   );
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const toast = useToast();
 
   const deleteProjectMutation = useDeleteProject({
-    onError: (message) => setDeleteError(message),
+    onError: (message) => toast.error(message),
   });
 
   const projectsQuery = useQuery({
@@ -61,7 +62,6 @@ export function ProjectsListScreen() {
 
   function handleDeleteProject(project: Project, event: MouseEvent) {
     event.stopPropagation();
-    setDeleteError(null);
     setProjectPendingDelete(project);
   }
 
@@ -161,12 +161,6 @@ export function ProjectsListScreen() {
           </button>
         </Can>
       </div>
-
-      {deleteError ? (
-        <div className="alert-error" style={{ margin: "0 24px 16px" }}>
-          {deleteError}
-        </div>
-      ) : null}
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -331,7 +325,6 @@ export function ProjectsListScreen() {
       onClose={() => setProjectPendingDelete(null)}
       onConfirm={() => {
         if (!projectPendingDelete) return;
-        setDeleteError(null);
         deleteProjectMutation.mutate(projectPendingDelete.id);
       }}
     />

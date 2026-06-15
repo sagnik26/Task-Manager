@@ -5,7 +5,7 @@ import { useAuthStore } from "../../store";
 /**
  * Axios instance for TaskFlow API.
  *
- * - `VITE_API_URL` defaults to `/api` (nginx or Netlify proxy to backend).
+ * - `VITE_API_URL` defaults to `/api` (nginx or Vercel proxy to backend).
  * - `withCredentials: true` so the HttpOnly auth cookie is sent automatically.
  */
 export const apiClient = axios.create({

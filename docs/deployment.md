@@ -4,11 +4,11 @@ TaskFlow is a **split deployment**: a static React frontend, a long-running Expr
 
 | Component | Recommended host | Why |
 | --------- | ---------------- | --- |
-| Frontend (`frontend/`) | **Vercel** (or Netlify) | Static Vite build + SPA routing |
-| Backend (`backend/`) | **Render**, **Railway**, **Fly.io** | Express server with a persistent Postgres pool |
+| Frontend (`frontend/`) | **Vercel** | Static Vite build + SPA routing |
+| Backend (`backend/`) | **Railway**, **Render**, **Fly.io** | Express server with a persistent Postgres pool |
 | Database | **Neon**, **Supabase**, **Render Postgres** | Managed PostgreSQL |
 
-The browser should call the **frontend origin** at `/api/...`. The host proxies those requests to the backend (same pattern as Docker/nginx and Netlify).
+The browser should call the **frontend origin** at `/api/...`. Vercel proxies those requests to the backend (same pattern as Docker/nginx).
 
 ---
 
@@ -143,18 +143,7 @@ vercel --prod
 
 ---
 
-## 4. Netlify (alternative frontend host)
-
-The repo includes `netlify.toml` at the repo root. Configure:
-
-- **Base directory:** `frontend`
-- **Environment variable:** `BACKEND_PROXY_URL` → your backend URL
-
-The build writes `dist/_redirects` via `frontend/scripts/write-netlify-redirects.mjs`.
-
----
-
-## 5. Architecture diagram
+## 4. Architecture diagram
 
 ```mermaid
 flowchart LR
@@ -165,7 +154,7 @@ flowchart LR
 
 ---
 
-## 6. Troubleshooting
+## 5. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 | ------- | ------------ | --- |
@@ -177,7 +166,7 @@ flowchart LR
 
 ---
 
-## 7. Local development vs production
+## 6. Local development vs production
 
 | | Local (Docker Compose) | Production |
 | - | ---------------------- | ---------- |

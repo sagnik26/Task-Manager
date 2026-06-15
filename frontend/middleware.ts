@@ -2,7 +2,7 @@
 
 /**
  * Proxies /api/* to the backend when BACKEND_PROXY_URL is set in Vercel.
- * Mirrors frontend/nginx.conf and scripts/write-netlify-redirects.mjs.
+ * Mirrors frontend/nginx.conf.
  *
  * When this env var is set, it takes precedence over the static rewrite in vercel.json.
  */

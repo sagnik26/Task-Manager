@@ -37,6 +37,7 @@ import {
   type SortState,
 } from "../../modules/tasks/components/SortPanel";
 import { TaskModal } from "../../modules/tasks/components/TaskModal";
+import { DeleteTaskConfirmModal } from "../../modules/tasks/components/DeleteTaskConfirmModal";
 import {
   applyTaskQuery,
   countActiveFilters,
@@ -91,6 +92,7 @@ export function ProjectDetailPage() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
   const [tasksActionError, setTasksActionError] = useState<string | null>(null);
   const [deleteProjectError, setDeleteProjectError] = useState<string | null>(null);
@@ -420,7 +422,6 @@ export function ProjectDetailPage() {
               currentUserId={currentUserId}
               userName={userName}
               assignees={membersQuery.data ?? []}
-              onAddTask={openCreateTask}
               onEditTask={(task) => {
                 setTaskModalMode("edit");
                 setEditingTask(task);
@@ -469,7 +470,14 @@ export function ProjectDetailPage() {
         defaultStatus={defaultStatus}
         onClose={() => setTaskModalOpen(false)}
         onSave={handleSaveTask}
-        onDelete={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
+        onRequestDelete={(task) => setTaskPendingDelete(task)}
+      />
+
+      <DeleteTaskConfirmModal
+        open={Boolean(taskPendingDelete)}
+        task={taskPendingDelete}
+        onClose={() => setTaskPendingDelete(null)}
+        onConfirm={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
       />
     </>
   );

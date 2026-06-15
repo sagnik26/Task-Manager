@@ -37,7 +37,7 @@ export function TaskModal({
   defaultStatus,
   onClose,
   onSave,
-  onDelete,
+  onRequestDelete,
 }: {
   open: boolean;
   mode: "create" | "edit";
@@ -47,7 +47,7 @@ export function TaskModal({
   defaultStatus?: TaskStatus;
   onClose: () => void;
   onSave: (next: Omit<Task, "id">, existingId?: string) => Promise<void> | void;
-  onDelete?: (taskId: string) => Promise<void> | void;
+  onRequestDelete?: (task: Task) => void;
 }) {
   const [draft, setDraft] = useState<TaskDraft>(() => toDraft(task, defaultStatus));
   const [submitting, setSubmitting] = useState(false);
@@ -142,25 +142,10 @@ export function TaskModal({
     }
   }
 
-  async function handleDelete() {
-    if (!task?.id || !onDelete) return;
-    setSubmitError(null);
-    const ok = window.confirm("Delete this task? This cannot be undone.");
-    if (!ok) return;
-    try {
-      setSubmitting(true);
-      await onDelete(task.id);
-      onClose();
-    } catch (error) {
-      const apiError = toApiError(error);
-      setSubmitError(
-        apiError.kind === "forbidden"
-          ? "You don’t have permission to delete this task."
-          : apiError.message,
-      );
-    } finally {
-      setSubmitting(false);
-    }
+  async function handleDeleteClick() {
+    if (!task || !onRequestDelete) return;
+    onRequestDelete(task);
+    onClose();
   }
 
   return (
@@ -305,12 +290,12 @@ export function TaskModal({
           </div>
 
           <div className="modal-actions">
-            {mode === "edit" && task?.id && onDelete ? (
+            {mode === "edit" && task?.id && onRequestDelete ? (
               <button
                 type="button"
                 className="btn btn-outline"
                 style={{ height: 38, padding: "0 18px", marginRight: "auto", color: "var(--danger)", borderColor: "var(--danger)" }}
-                onClick={() => void handleDelete()}
+                onClick={() => void handleDeleteClick()}
                 disabled={submitting}
               >
                 Delete

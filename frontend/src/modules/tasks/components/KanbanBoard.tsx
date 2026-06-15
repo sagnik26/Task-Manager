@@ -1,4 +1,4 @@
-import { Calendar, Plus } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 import {
   PRIORITY_META,
@@ -7,7 +7,7 @@ import {
 } from "../../../shared/theme/design";
 import { Avatar } from "../../../shared/ui/Avatar";
 import type { ProjectMember } from "../../../api/projects.api";
-import type { Task, TaskStatus } from "../../../types/tasks";
+import type { Task } from "../../../types/tasks";
 
 function resolveAssigneeLabel(
   assigneeId: string,
@@ -24,14 +24,12 @@ export function KanbanBoard({
   currentUserId,
   userName,
   assignees = [],
-  onAddTask,
   onEditTask,
 }: {
   tasks: Task[];
   currentUserId: string;
   userName: string;
   assignees?: ProjectMember[];
-  onAddTask: (status: TaskStatus) => void;
   onEditTask: (task: Task) => void;
 }) {
   return (
@@ -48,15 +46,6 @@ export function KanbanBoard({
               <span className="kanban-column__dot" style={{ background: col.color }} />
               <span className="kanban-column__label">{col.label}</span>
               <span className="kanban-column__count">{columnTasks.length}</span>
-              <button
-                type="button"
-                className="icon-btn icon-btn--sm"
-                style={{ width: 22, height: 22 }}
-                onClick={() => onAddTask(col.id)}
-                aria-label={`Add task to ${col.label}`}
-              >
-                <Plus size={12} strokeWidth={2.5} />
-              </button>
             </div>
 
             <div className="kanban-column__list">
@@ -111,14 +100,6 @@ export function KanbanBoard({
                 );
               })}
 
-              <button
-                type="button"
-                className="add-task-btn"
-                onClick={() => onAddTask(col.id)}
-              >
-                <Plus size={11} strokeWidth={2.5} />
-                Add task
-              </button>
             </div>
           </div>
         );

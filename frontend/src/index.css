@@ -1617,6 +1617,17 @@ textarea {
   margin-bottom: 13px;
 }
 
+.modal-card--confirm {
+  width: 420px;
+}
+
+.modal-card__message {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .modal-actions {
   display: flex;
   gap: 8px;

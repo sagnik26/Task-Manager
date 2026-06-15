@@ -20,6 +20,6 @@ export const useAuthStore = create<AuthState>()(
       setPermissions: (permissions) => set({ permissions }),
       clear: () => set({ user: null, permissions: null }),
     }),
-    { name: "taskflow.auth" },
+    { name: "taskflow.auth", skipHydration: true },
   ),
 );

@@ -14,6 +14,6 @@ export const useDarkMode = create<DarkModeState>()(
       toggle: () => set((s) => ({ darkMode: !s.darkMode })),
       setDarkMode: (value) => set({ darkMode: value }),
     }),
-    { name: "taskmanager-dark-mode" },
+    { name: "taskmanager-dark-mode", skipHydration: true },
   ),
 );

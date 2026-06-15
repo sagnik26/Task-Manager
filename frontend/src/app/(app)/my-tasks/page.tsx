@@ -1,5 +1,7 @@
+"use client";
+
 import { MyTasksScreen } from "@/modules/tasks";
 
-export function MyTasksPage() {
+export default function MyTasksPage() {
   return <MyTasksScreen />;
 }

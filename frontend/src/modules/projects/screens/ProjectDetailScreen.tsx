@@ -8,7 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/modules/auth";
@@ -57,7 +57,7 @@ import { LoadingState } from "@/shared/ui/LoadingState";
 import type { Task, TaskStatus } from "@/modules/tasks/types/tasks.types";
 
 export function ProjectDetailScreen({ projectId }: { projectId: string }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { user } = useAuth();
   const currentUserId = user?.id ?? "me";
   const userName = user?.name ?? "Me";
@@ -90,7 +90,7 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
     onError: (message) => toast.error(message),
   });
   const deleteProjectMutation = useDeleteProject({
-    onSuccess: () => navigate("/projects"),
+    onSuccess: () => router.push("/projects"),
     onError: (message) => toast.error(message),
   });
 
@@ -248,7 +248,7 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
       <div className="board-view" style={{ flex: 1, minHeight: 0 }}>
         <div className="board-header">
           <div className="breadcrumb">
-            <button type="button" className="breadcrumb__link" onClick={() => navigate("/projects")}>
+            <button type="button" className="breadcrumb__link" onClick={() => router.push("/projects")}>
               Dashboard
             </button>
             <ChevronRight size={12} color="var(--secondary)" />

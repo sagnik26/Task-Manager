@@ -1,6 +1,8 @@
+"use client";
+
 import { LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/modules/auth";
 import type { UserRole } from "@/modules/auth/types/auth.types";
@@ -14,7 +16,7 @@ function roleLabel(role: UserRole | undefined): string {
 
 export function Topbar() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +46,7 @@ export function Topbar() {
 
   const handleLogout = () => {
     setMenuOpen(false);
-    void logout().finally(() => navigate("/login"));
+    void logout().finally(() => router.push("/login"));
   };
 
   return (

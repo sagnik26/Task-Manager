@@ -1,4 +1,4 @@
-import { Link as RouterLink } from "react-router-dom";
+import Link from "next/link";
 
 import type { LoginInput } from "@/modules/auth/schemas/auth.schemas";
 
@@ -97,9 +97,9 @@ export function LoginForm({
 
       <p className="auth-switch">
         No account yet?{" "}
-        <RouterLink to="/register" className="btn-link btn-link--bold">
+        <Link href="/register" className="btn-link btn-link--bold">
           Create one →
-        </RouterLink>
+        </Link>
       </p>
     </form>
   );

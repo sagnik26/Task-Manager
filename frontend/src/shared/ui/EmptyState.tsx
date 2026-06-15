@@ -1,4 +1,4 @@
-import { Link as RouterLink } from "react-router-dom";
+import Link from "next/link";
 
 export function EmptyState({
   title,
@@ -15,9 +15,9 @@ export function EmptyState({
 }) {
   const action =
     actionLabel && actionHref ? (
-      <RouterLink to={actionHref} className="btn btn-primary btn-primary--md">
+      <Link href={actionHref} className="btn btn-primary btn-primary--md">
         {actionLabel}
-      </RouterLink>
+      </Link>
     ) : actionLabel && onAction ? (
       <button type="button" className="btn btn-primary btn-primary--md" onClick={onAction}>
         {actionLabel}

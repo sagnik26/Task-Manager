@@ -1,5 +1,5 @@
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import {
   registerSchema,
@@ -9,7 +9,7 @@ import { useAuth } from "@/modules/auth/context/useAuth";
 import { handleAuthFormError } from "@/modules/auth/utils/authFormErrors";
 
 export function useRegisterForm() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { register } = useAuth();
 
   const [values, setValues] = useState<RegisterInput>({
@@ -51,7 +51,7 @@ export function useRegisterForm() {
     try {
       setSubmitting(true);
       await register(parsed.data);
-      navigate("/projects");
+      router.push("/projects");
     } catch (err) {
       handleAuthFormError<keyof RegisterInput>({
         error: err,

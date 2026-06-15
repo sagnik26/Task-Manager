@@ -1,5 +1,7 @@
+"use client";
+
 import { ProjectsListScreen } from "@/modules/projects";
 
-export function ProjectsListPage() {
+export default function ProjectsPage() {
   return <ProjectsListScreen />;
 }

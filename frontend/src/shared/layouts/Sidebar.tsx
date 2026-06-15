@@ -1,5 +1,8 @@
+"use client";
+
 import { CheckSquare, Home, Plus, Users } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { useProjects } from "@/modules/projects";
 import { Can } from "@/shared/permissions/Can";
@@ -10,41 +13,41 @@ export function Sidebar({
 }: {
   onNewProject: () => void;
 }) {
-  const location = useLocation();
+  const pathname = usePathname();
   const projectsQuery = useProjects();
 
   const projects = projectsQuery.data ?? [];
   const isDashboard =
-    location.pathname === "/projects" || location.pathname === "/dashboard";
-  const isUsers = location.pathname === "/users";
-  const isMyTasks = location.pathname === "/my-tasks";
+    pathname === "/projects" || pathname === "/dashboard";
+  const isUsers = pathname === "/users";
+  const isMyTasks = pathname === "/my-tasks";
 
   return (
     <aside className="sidebar">
       <div className="sidebar__nav">
-        <NavLink
-          to="/projects"
+        <Link
+          href="/projects"
           className={`sidebar-nav-item${isDashboard ? " sidebar-nav-item--active" : ""}`}
         >
           <Home size={15} />
           Dashboard
-        </NavLink>
+        </Link>
         <Can permission="manageUsers">
-          <NavLink
-            to="/users"
+          <Link
+            href="/users"
             className={`sidebar-nav-item${isUsers ? " sidebar-nav-item--active" : ""}`}
           >
             <Users size={15} />
             Users
-          </NavLink>
+          </Link>
         </Can>
-        <NavLink
-          to="/my-tasks"
+        <Link
+          href="/my-tasks"
           className={`sidebar-nav-item${isMyTasks ? " sidebar-nav-item--active" : ""}`}
         >
           <CheckSquare size={15} />
           My tasks
-        </NavLink>
+        </Link>
       </div>
 
       <div className="sidebar__divider" />
@@ -67,11 +70,11 @@ export function Sidebar({
 
         {projects.map((project, index) => {
           const { color } = projectVisuals(index);
-          const active = location.pathname === `/projects/${project.id}`;
+          const active = pathname === `/projects/${project.id}`;
           return (
-            <NavLink
+            <Link
               key={project.id}
-              to={`/projects/${project.id}`}
+              href={`/projects/${project.id}`}
               className={`sidebar-project-item${active ? " sidebar-project-item--active" : ""}`}
             >
               <span
@@ -79,7 +82,7 @@ export function Sidebar({
                 style={{ background: color }}
               />
               <span className="sidebar-project-item__name">{project.name}</span>
-            </NavLink>
+            </Link>
           );
         })}
 

@@ -1,9 +1,14 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAuth } from "../../src/modules/auth/context/useAuth";
 import { ProtectedRoute } from "../../src/shared/layouts/ProtectedRoute";
+
+const replaceMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+}));
 
 vi.mock("../../src/modules/auth/context/useAuth.ts", () => ({
   useAuth: vi.fn(),
@@ -14,6 +19,7 @@ const mockedUseAuth = vi.mocked(useAuth);
 describe("ProtectedRoute", () => {
   beforeEach(() => {
     mockedUseAuth.mockReset();
+    replaceMock.mockReset();
   });
 
   it("shows loading state while auth is bootstrapping", () => {
@@ -29,11 +35,9 @@ describe("ProtectedRoute", () => {
     });
 
     render(
-      <MemoryRouter>
-        <ProtectedRoute>
-          <div>Secret content</div>
-        </ProtectedRoute>
-      </MemoryRouter>,
+      <ProtectedRoute>
+        <div>Secret content</div>
+      </ProtectedRoute>,
     );
 
     expect(screen.getByText("Checking session…")).toBeInTheDocument();
@@ -53,14 +57,13 @@ describe("ProtectedRoute", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/projects"]}>
-        <ProtectedRoute>
-          <div>Secret content</div>
-        </ProtectedRoute>
-      </MemoryRouter>,
+      <ProtectedRoute>
+        <div>Secret content</div>
+      </ProtectedRoute>,
     );
 
     expect(screen.queryByText("Secret content")).not.toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith("/login");
   });
 
   it("renders children for authenticated users", () => {
@@ -83,11 +86,9 @@ describe("ProtectedRoute", () => {
     });
 
     render(
-      <MemoryRouter>
-        <ProtectedRoute>
-          <div>Secret content</div>
-        </ProtectedRoute>
-      </MemoryRouter>,
+      <ProtectedRoute>
+        <div>Secret content</div>
+      </ProtectedRoute>,
     );
 
     expect(screen.getByText("Secret content")).toBeInTheDocument();

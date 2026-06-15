@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { EmptyState } from "../../src/shared/ui/EmptyState";
@@ -18,11 +17,9 @@ describe("EmptyState", () => {
     expect(screen.getByText("Create your first task to get started.")).toBeInTheDocument();
   });
 
-  it("renders a router link action when actionHref is provided", () => {
+  it("renders a link action when actionHref is provided", () => {
     render(
-      <MemoryRouter>
-        <EmptyState title="No projects" actionLabel="Create project" actionHref="/projects/new" />
-      </MemoryRouter>,
+      <EmptyState title="No projects" actionLabel="Create project" actionHref="/projects/new" />,
     );
 
     const link = screen.getByRole("link", { name: "Create project" });

@@ -1,5 +1,7 @@
+"use client";
+
 import { UsersScreen } from "@/modules/users";
 
-export function UsersPage() {
+export default function UsersPage() {
   return <UsersScreen />;
 }

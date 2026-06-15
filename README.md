@@ -38,7 +38,7 @@ https://github.com/user-attachments/assets/18d71baf-80d1-4fc1-8f1d-293cb1556965
 
 ## 🏗 Architecture
 
-TaskManager is a three-tier, modular monolith: a React SPA talks to an Express API over REST; the API persists data in PostgreSQL with tenant-scoped RBAC.
+TaskManager is a three-tier, modular monolith: a Next.js frontend talks to an Express API over REST; the API persists data in PostgreSQL with tenant-scoped RBAC.
 
 ### Assumptions
 
@@ -62,14 +62,14 @@ Until then, bootstrap tenants and admins via **seed** or **ops scripts**.
 flowchart LR
     subgraph Client["«presentation» Client tier"]
         direction TB
-        Pages["pages/* — route shells"]
+        Pages["app/* — route pages"]
         Modules["modules/* — screens, hooks, API"]
         SharedFE["shared/* — HTTP client, UI, layouts"]
         Pages --> Modules --> SharedFE
     end
 
     subgraph Edge["«proxy» Edge / dev proxy"]
-        Proxy["nginx or Vite<br/>forwards /api → backend"]
+        Proxy["Next.js<br/>forwards /api → backend"]
     end
 
     subgraph App["«application» Backend tier (modular monolith)"]
@@ -98,7 +98,7 @@ A typical session: login sets an `authToken` cookie; later requests send that co
 ```mermaid
 sequenceDiagram
     actor User
-    participant UI as React SPA
+    participant UI as Next.js app
     participant API as Backend API
     participant DB as PostgreSQL
 
@@ -225,7 +225,7 @@ New users **auto-join** the default tenant as `developer` with `is_active = true
   - Frontend loads `GET /auth/permissions` after login and gates UI with `<Can>` / `useCan()`
   - See [RBAC implementation guide](./docs/rbac-implementation-guide.md) for the full permission model
 3. **Feature modules on the frontend**
-  - Route files under `pages/` are thin shells; domain API, types, hooks, and UI live in `modules/<feature>/`
+  - Route files under `app/` are thin wrappers; domain API, types, hooks, and UI live in `modules/<feature>/`
   - Server state via TanStack Query; global session state via Zustand (auth only)
   - Optimistic cache updates for task and project mutations with rollback on error
 
@@ -266,9 +266,8 @@ See [RBAC implementation guide](./docs/rbac-implementation-guide.md) for route m
 
 ### Frontend
 
-- **Framework**: React 19, TypeScript
-- **Build tool**: Vite
-- **Routing**: React Router
+- **Framework**: Next.js 15 (App Router), React 19, TypeScript
+- **Routing**: Next.js file-based routes
 - **Server state**: TanStack Query
 - **Client state**: Zustand (auth session persistence)
 - **HTTP client**: Axios (`shared/http/client.ts`)
@@ -300,7 +299,7 @@ docker compose up --build
 
 #### Access:
 
-- **Frontend**: [http://localhost:3000](http://localhost:3000) (nginx serves the SPA; proxies `/api` to the backend)
+- **Frontend**: [http://localhost:3000](http://localhost:3000) (Next.js; proxies `/api` to the backend)
 - **Backend API**: [http://localhost:4000](http://localhost:4000)
 - **Swagger UI**: [http://localhost:4000/api-docs](http://localhost:4000/api-docs)
 - **PostgreSQL**: [http://localhost:5432](http://localhost:5432) — database `taskflow`, user `postgres`, password `postgres`
@@ -330,7 +329,7 @@ npm run dev          # http://localhost:4000
 # 3. Frontend (new terminal)
 cd frontend
 npm install
-npm run dev          # http://localhost:5173 — Vite proxies /api → localhost:4000
+npm run dev          # http://localhost:3000 — Next.js rewrites /api → localhost:4000
 ```
 
 
@@ -412,13 +411,11 @@ taskflow-sagnik-ghosh/
 │   ├── public/
 │   ├── tests/
 │   ├── src/
-│   │   ├── main.tsx
-│   │   ├── app/App.tsx           # routes → pages/*
-│   │   ├── pages/                # thin route shells only
+│   │   ├── app/                  # Next.js App Router (routes + layouts)
 │   │   ├── modules/              # feature domains (auth, projects, tasks, users)
 │   │   └── shared/               # http, types, utils, theme, ui, layouts, permissions
-│   ├── vite.config.ts            # `@` → `src`
-│   └── nginx.conf
+│   ├── next.config.ts
+│   └── Dockerfile
 │
 ├── docs/
 │   ├── rbac-implementation-guide.md
@@ -430,11 +427,11 @@ taskflow-sagnik-ghosh/
 
 ## 🖥 Frontend
 
-React + TypeScript + Vite SPA for the TaskManager project management UI.
+React + TypeScript + Next.js App Router for the TaskManager project management UI.
 
 ### Design system
 
-UI follows the **monday.com Vibe** look — custom CSS (not a component library), with tokens in `frontend/src/index.css` and `shared/theme/design.ts`.
+UI follows the **monday.com Vibe** look — custom CSS (not a component library), with tokens in `frontend/src/app/globals.css` and `shared/theme/design.ts`.
 
 - **Fonts** — Figtree (UI), Poppins (headings)
 - **Brand** — primary blue `#0073EA`, neutral ink `#323338`
@@ -444,23 +441,24 @@ UI follows the **monday.com Vibe** look — custom CSS (not a component library)
 
 Full tokens, layout, and component patterns: [Frontend Design System](./docs/Frontend-Design-System.md).
 
-### Pages vs modules
+### Routes vs modules
 
-- **`pages/`** — connect URLs to screens (routing only)
+- **`app/`** — Next.js App Router pages and layouts (thin wrappers around screens)
 - **`modules/`** — feature code (UI, API calls, hooks, types)
 
 ```
-pages/                          # routes only — import a Screen and render it
-├── auth/
-│   ├── LoginPage.tsx           # → LoginScreen
-│   └── RegisterPage.tsx        # → RegisterScreen
-├── projects/
-│   ├── ProjectsListPage.tsx    # → ProjectsListScreen
-│   └── ProjectDetailPage.tsx   # → ProjectDetailScreen (passes route id)
-├── tasks/
-│   └── MyTasksPage.tsx         # → MyTasksScreen
-└── users/
-    └── UsersPage.tsx           # → UsersScreen
+app/                            # file-based routes
+├── layout.tsx                  # root layout + providers
+├── (auth)/
+│   ├── login/page.tsx          # → LoginScreen
+│   └── register/page.tsx       # → RegisterScreen
+└── (app)/
+    ├── layout.tsx              # ProtectedRoute + AppShell
+    ├── projects/
+    │   ├── page.tsx            # → ProjectsListScreen
+    │   └── [id]/page.tsx       # → ProjectDetailScreen
+    ├── my-tasks/page.tsx       # → MyTasksScreen
+    └── users/page.tsx          # → UsersScreen
 ```
 
 ```
@@ -470,7 +468,7 @@ modules/<feature>/              # all feature logic lives here
 ├── types/
 ├── hooks/
 ├── components/
-├── screens/          # full page UI (used by pages/*)
+├── screens/          # full page UI (used by app route pages)
 ├── schemas/          # optional — form validation
 ├── utils/            # optional — helpers (e.g. cache updates)
 └── context/          # optional — auth session only today
@@ -522,12 +520,13 @@ The UI updates immediately; if the API fails, the change is rolled back. Helpers
 ### Frontend scripts
 
 
-| Command         | Description           |
-| --------------- | --------------------- |
-| `npm run dev`   | Start Vite dev server |
-| `npm run build` | Production build      |
-| `npm test`      | Run Vitest unit tests |
-| `npm run lint`  | ESLint                |
+| Command         | Description              |
+| --------------- | ------------------------ |
+| `npm run dev`   | Start Next.js dev server |
+| `npm run build` | Production build         |
+| `npm run start` | Run production server    |
+| `npm test`      | Run Vitest unit tests    |
+| `npm run lint`  | ESLint                   |
 
 
 ## 📡 API Documentation
@@ -625,20 +624,24 @@ When modifying database schemas:
 
 1. **Module** — add or extend `frontend/src/modules/<feature>/` following the module layout above
 2. **Screen** — full page UI in `modules/<feature>/screens/`
-3. **Page shell** — thin route wrapper in `pages/<feature>/`
-4. **Route** — register in `src/app/App.tsx`
-5. **API + hooks** — HTTP calls in `modules/<feature>/api/`, React Query hooks in `hooks/`
+3. **Route page** — thin wrapper in `src/app/(app)/<feature>/page.tsx`
+4. **API + hooks** — HTTP calls in `modules/<feature>/api/`, React Query hooks in `hooks/`
 
-Example thin page:
+Example route page:
 
 ```tsx
-// pages/projects/ProjectDetailPage.tsx
-import { useParams } from "react-router-dom";
+// app/(app)/projects/[id]/page.tsx
+"use client";
+
+import { use } from "react";
 import { ProjectDetailScreen } from "@/modules/projects";
 
-export function ProjectDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  if (!id) return null;
+export default function ProjectDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   return <ProjectDetailScreen projectId={id} />;
 }
 ```
@@ -705,15 +708,15 @@ export function ProjectDetailPage() {
 
 **Solution:** Start Postgres: `docker compose up postgres -d`.
 
-#### 4. `npm run start` fails
+#### 4. `npm run start` fails (backend)
 
 **Solution:** Run `npm run build` first — `start` runs compiled `dist/server.js`. Prefer `npm run dev` while developing.
 
 #### 5. Frontend can't reach backend
 
 - Verify backend is running on port 4000
-- In Docker, the frontend proxies `/api` via nginx
-- In local dev, Vite proxies `/api` → `localhost:4000`
+- In Docker, the frontend proxies `/api` via Next.js rewrites (`BACKEND_PROXY_URL=http://backend:4000`)
+- In local dev, Next.js rewrites `/api` → `localhost:4000`
 - Check browser console for CORS or 401/403 errors
 
 ### Logs

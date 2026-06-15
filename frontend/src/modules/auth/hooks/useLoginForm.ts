@@ -1,5 +1,5 @@
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import {
   loginSchema,
@@ -9,7 +9,7 @@ import { useAuth } from "@/modules/auth/context/useAuth";
 import { handleAuthFormError } from "@/modules/auth/utils/authFormErrors";
 
 export function useLoginForm() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { login } = useAuth();
 
   const [values, setValues] = useState<LoginInput>({ email: "", password: "" });
@@ -42,7 +42,7 @@ export function useLoginForm() {
     try {
       setSubmitting(true);
       await login(parsed.data);
-      navigate("/projects");
+      router.push("/projects");
     } catch (err) {
       handleAuthFormError<keyof LoginInput>({
         error: err,

@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
-import { Outlet } from "react-router-dom";
+"use client";
+
+import { useCallback, useState, type ReactNode } from "react";
 
 import {
   CreateProjectModal,
@@ -9,14 +10,13 @@ import {
 } from "@/modules/projects";
 import { useCan } from "@/shared/permissions/usePermission";
 import { useToast } from "@/shared/ui/toast";
+import { AppShellContext } from "./AppShellContext";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
-export type AppShellContext = {
-  openNewProject: () => void;
-};
+export type { AppShellContext as AppShellContextType } from "./AppShellContext";
 
-export function AppShell() {
+export function AppShell({ children }: { children: ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false);
   const toast = useToast();
   const createMutation = useCreateProject({
@@ -39,22 +39,22 @@ export function AppShell() {
   }, [canCreateProject]);
 
   return (
-    <div className="app-shell">
-      <Topbar />
-      <div className="app-body">
-        <Sidebar onNewProject={openNewProject} />
-        <main className="main-content">
-          <Outlet context={{ openNewProject } satisfies AppShellContext} />
-        </main>
-      </div>
+    <AppShellContext.Provider value={{ openNewProject }}>
+      <div className="app-shell">
+        <Topbar />
+        <div className="app-body">
+          <Sidebar onNewProject={openNewProject} />
+          <main className="main-content">{children}</main>
+        </div>
 
-      {canCreateProject ? (
-        <CreateProjectModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onCreate={onCreate}
-        />
-      ) : null}
-    </div>
+        {canCreateProject ? (
+          <CreateProjectModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onCreate={onCreate}
+          />
+        ) : null}
+      </div>
+    </AppShellContext.Provider>
   );
 }

@@ -6,8 +6,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type MouseEvent } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { getProjectStats, listProjects } from "@/modules/projects/api/projects.api";
@@ -27,7 +27,7 @@ import {
   projectVisuals,
 } from "@/shared/theme/design";
 import type { Project } from "@/modules/projects/types/projects.types";
-import type { AppShellContext } from "@/shared/layouts/AppShell";
+import { useAppShellContext } from "@/shared/layouts/AppShellContext";
 import { toApiError } from "@/shared/utils/apiErrors";
 
 type ProjectWithStats = Project & {
@@ -40,8 +40,8 @@ type ProjectWithStats = Project & {
 };
 
 export function ProjectsListScreen() {
-  const navigate = useNavigate();
-  const { openNewProject } = useOutletContext<AppShellContext>();
+  const router = useRouter();
+  const { openNewProject } = useAppShellContext();
   const { user } = useAuth();
   const canCreateProject = useCan("createProject");
   const [projectPendingDelete, setProjectPendingDelete] = useState<Project | null>(
@@ -246,9 +246,9 @@ export function ProjectsListScreen() {
             <div
               key={project.id}
               className="project-card"
-              onClick={() => navigate(`/projects/${project.id}`)}
+              onClick={() => router.push(`/projects/${project.id}`)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") navigate(`/projects/${project.id}`);
+                if (e.key === "Enter") router.push(`/projects/${project.id}`);
               }}
               role="button"
               tabIndex={0}

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 
 import {
   PRIORITY_META,
@@ -18,7 +18,7 @@ const STATUS_BY_ID = Object.fromEntries(
 );
 
 export function MyTasksScreen() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { user } = useAuth();
   const { tasks, isLoading, isError, error, refetch } = useMyTasks(user?.id);
 
@@ -45,7 +45,7 @@ export function MyTasksScreen() {
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
   function openProject(task: AssignedTask) {
-    navigate(`/projects/${task.projectId}`);
+    router.push(`/projects/${task.projectId}`);
   }
 
   return (

@@ -1,5 +1,7 @@
+"use client";
+
 import { LoginScreen } from "@/modules/auth";
 
-export function LoginPage() {
+export default function LoginPage() {
   return <LoginScreen />;
 }

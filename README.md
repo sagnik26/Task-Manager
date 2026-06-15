@@ -223,7 +223,7 @@ New users **auto-join** the default tenant as `developer` with `is_active = true
 2. **Role-based access control**
   - Permissions defined in `backend/src/shared/permissions/permissions.ts` and enforced via `authorize()` middleware
   - Frontend loads `GET /auth/permissions` after login and gates UI with `<Can>` / `useCan()`
-  - See `[docs/rbac-implementation-guide.md](./docs/rbac-implementation-guide.md)` for the full permission model
+  - See [RBAC implementation guide](./docs/rbac-implementation-guide.md) for the full permission model
 3. **Feature modules on the frontend**
   - Route files under `pages/` are thin shells; domain API, types, hooks, and UI live in `modules/<feature>/`
   - Server state via TanStack Query; global session state via Zustand (auth only)
@@ -250,7 +250,7 @@ Permission strings use `action:resource`. The API enforces them via `authorize()
 
 **Admin** — all tenant projects. **Developer** — only `project_members` projects; task delete also checks creator in the service layer.
 
-See `[docs/rbac-implementation-guide.md](./docs/rbac-implementation-guide.md)` for route mapping and implementation details.
+See [RBAC implementation guide](./docs/rbac-implementation-guide.md) for route mapping and implementation details.
 
 ## 🛠 Tech Stack
 
@@ -273,7 +273,7 @@ See `[docs/rbac-implementation-guide.md](./docs/rbac-implementation-guide.md)` f
 - **Client state**: Zustand (auth session persistence)
 - **HTTP client**: Axios (`shared/http/client.ts`)
 - **Validation**: Zod (form schemas)
-- **UI**: Custom design system, Lucide icons — see `[docs/Frontend-Design-System.md](./docs/Frontend-Design-System.md)`
+- **UI**: Custom design system, Lucide icons — see [Frontend Design System](./docs/Frontend-Design-System.md)
 
 ### Infrastructure
 
@@ -385,7 +385,7 @@ Rollback when needed: `npm run migrate:down`
 | **Backend** | [Railway](https://railway.app) — Docker container (`backend/Dockerfile`) |
 | **Database** | [Supabase](https://supabase.com) — managed PostgreSQL |
 
-Step-by-step guide: [`docs/deployment.md`](./docs/deployment.md).
+Step-by-step guide: [deployment guide](./docs/deployment.md).
 
 ## 📁 Project Structure
 
@@ -431,6 +431,18 @@ taskflow-sagnik-ghosh/
 ## 🖥 Frontend
 
 React + TypeScript + Vite SPA for the TaskManager project management UI.
+
+### Design system
+
+UI follows the **monday.com Vibe** look — custom CSS (not a component library), with tokens in `frontend/src/index.css` and `shared/theme/design.ts`.
+
+- **Fonts** — Figtree (UI), Poppins (headings)
+- **Brand** — primary blue `#0073EA`, neutral ink `#323338`
+- **Theme** — light/dark via CSS variables; toggle in the topbar
+- **Shared UI** — reusable pieces in `shared/ui/` (Avatar, modals, toasts, loading/error states)
+- **Task visuals** — Kanban status colors and priority badges from `design.ts`
+
+Full tokens, layout, and component patterns: [Frontend Design System](./docs/Frontend-Design-System.md).
 
 ### Pages vs modules
 
@@ -633,7 +645,7 @@ export function ProjectDetailPage() {
 
 ### Future improvements
 
-**Production hardening** — full checklist in [`docs/production-hardening.md`](./docs/production-hardening.md):
+**Production hardening** — full checklist in [production hardening](./docs/production-hardening.md):
 
 | Priority | Area |
 | -------- | ---- |

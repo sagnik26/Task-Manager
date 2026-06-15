@@ -1,19 +1,16 @@
 import { UserPlus, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
-import {
-  addProjectMember,
-  listProjectMembers,
-  removeProjectMember,
-} from "@/modules/projects/api/projects.api";
+import { listProjectMembers } from "@/modules/projects/api/projects.api";
 import { projectKeys } from "@/modules/projects/api/query-keys";
+import { useAddProjectMember } from "@/modules/projects/hooks/useAddProjectMember";
+import { useRemoveProjectMember } from "@/modules/projects/hooks/useRemoveProjectMember";
 import type { ProjectMember } from "@/modules/projects/types/projects.types";
 import { listUsers } from "@/modules/users/api/users.api";
 import { userKeys } from "@/modules/users/api/query-keys";
 import { Avatar } from "@/shared/ui/Avatar";
 import { LoadingState } from "@/shared/ui/LoadingState";
-import { toApiError } from "@/shared/utils/apiErrors";
 import type { TenantUser } from "@/modules/users/types/users.types";
 
 export function ProjectMembersPanel({
@@ -23,7 +20,6 @@ export function ProjectMembersPanel({
   projectId: string;
   onClose: () => void;
 }) {
-  const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -38,25 +34,16 @@ export function ProjectMembersPanel({
     queryFn: listUsers,
   });
 
-  const addMutation = useMutation({
-    mutationFn: (userId: string) => addProjectMember(projectId, userId),
-    onSuccess: async () => {
+  const addMutation = useAddProjectMember(projectId, {
+    onSuccess: () => {
       setSelectedUserId("");
       setActionError(null);
-      await queryClient.invalidateQueries({ queryKey: projectKeys.members(projectId) });
-      await queryClient.invalidateQueries({ queryKey: projectKeys.all });
     },
-    onError: (error) => setActionError(toApiError(error).message),
+    onError: (message) => setActionError(message),
   });
 
-  const removeMutation = useMutation({
-    mutationFn: (userId: string) => removeProjectMember(projectId, userId),
-    onSuccess: async () => {
-      setActionError(null);
-      await queryClient.invalidateQueries({ queryKey: projectKeys.members(projectId) });
-      await queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    },
-    onError: (error) => setActionError(toApiError(error).message),
+  const removeMutation = useRemoveProjectMember(projectId, {
+    onError: (message) => setActionError(message),
   });
 
   const members = membersQuery.data ?? [];
@@ -72,7 +59,21 @@ export function ProjectMembersPanel({
 
   async function handleAdd() {
     if (!selectedUserId) return;
-    await addMutation.mutateAsync(selectedUserId);
+    const user = availableUsers.find((u) => u.id === selectedUserId);
+    if (!user) return;
+
+    const optimisticMember: ProjectMember = {
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      joinedAt: new Date().toISOString(),
+    };
+
+    await addMutation.mutateAsync({
+      userId: selectedUserId,
+      member: optimisticMember,
+    });
   }
 
   return (

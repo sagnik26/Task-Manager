@@ -69,7 +69,7 @@ Not every module needs a Zustand store or React context. Modules share the same 
 |------------|----------------------|----------------|-----|
 | `auth`     | **Client**           | `context/auth.store.ts` (Zustand, persisted) + `context/AuthContext.tsx` (React provider) | Session (`user`, `permissions`) is global, survives refresh, and must be readable outside React (e.g. axios 401 handler clears the store). Context exposes actions (`login`, `logout`, `bootstrap`) and `isBootstrapped`. Login/register **form** fields use local `useState` in `hooks/useLoginForm` and `hooks/useRegisterForm`. |
 | `projects` | **Server**           | `hooks/useProjects`, `hooks/useCreateProject` + queries in screens | Projects, stats, and members come from the API. React Query caches and invalidates them (`api/query-keys.ts`). **Ephemeral UI** (create-project modal in `AppShell`, filter/sort panels, open modals) stays in local `useState` on screens/components. |
-| `tasks`    | **Server**           | `hooks/useMyTasks` + task queries/mutations in `ProjectDetailScreen` | Tasks are server-owned records. List/create/update/delete go through React Query. **Ephemeral UI** (modal drafts, filter/sort draft state, panel open/close) uses local `useState` in components and screens. |
+| `tasks`    | **Server**           | `hooks/useMyTasks`, `useUpdateTask`, `useCreateTask`, `useDeleteTask` | Tasks are server-owned records. Mutations use optimistic cache updates where listed above. |
 | `users`    | **Server**           | `hooks/useUsers` | User directory is read from the API; no global client cache beyond React Query. |
 
 **Rule of thumb**
@@ -79,6 +79,26 @@ Not every module needs a Zustand store or React context. Modules share the same 
 - **Local state (`useState`)** — **UI-only** and **short-lived** (form inputs before submit, which modal is open, filter panel drafts). Stays in hooks, components, or screens; not in a global store.
 
 `context/index.ts` under `projects`, `tasks`, and `users` is a structural placeholder. Add a real provider there only when a module gains **global client-owned** state that React Query cannot represent (e.g. a cross-route WebSocket or app-wide draft).
+
+### Optimistic mutations
+
+Mutations update the React Query cache **immediately** (`onMutate`), roll back on error (`onError`), then refetch related queries (`onSettled`). Helpers live in `modules/*/utils/optimistic*Cache.ts`; hooks encapsulate the pattern.
+
+| Action | Hook | Primary cache updated |
+|--------|------|------------------------|
+| Update task | `useUpdateTask` | `taskKeys.byProject` |
+| Delete task | `useDeleteTask` | `taskKeys.byProject` |
+| Create task | `useCreateTask` | `taskKeys.byProject` (temp id → server id) |
+| Delete project | `useDeleteProject` | `projectKeys.all` |
+| Create project | `useCreateProject` | `projectKeys.all` (temp id → server id) |
+| Remove member | `useRemoveProjectMember` | `projectKeys.members` |
+| Add member | `useAddProjectMember` | `projectKeys.members` |
+
+**Stays pessimistic:** auth (`login`, `register`, `logout`) — session updates only after the API confirms success.
+
+Related caches (e.g. `projectKeys.stats`, `taskKeys.byAssignee` for My Tasks) are **invalidated on settled**, not patched optimistically.
+
+**Modal UX:** create/edit/delete modals call `mutate()` and close immediately; the list/board updates optimistically behind them. API failures roll back the cache and surface on page-level error banners (`tasksActionError`, `deleteError`, `createError`), not inside the modal.
 
 ### Import rules
 

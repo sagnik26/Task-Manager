@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 
 import {
   CreateProjectModal,
+  buildOptimisticProjectPayload,
   useCreateProject,
   type CreateProjectValues,
 } from "@/modules/projects";
@@ -16,14 +17,20 @@ export type AppShellContext = {
 
 export function AppShell() {
   const [modalOpen, setModalOpen] = useState(false);
-  const createMutation = useCreateProject();
+  const [createError, setCreateError] = useState<string | null>(null);
+  const createMutation = useCreateProject({
+    onError: (message) => setCreateError(message),
+  });
   const canCreateProject = useCan("createProject");
 
-  async function onCreate(values: CreateProjectValues) {
-    await createMutation.mutateAsync({
-      name: values.name,
-      description: values.description ? values.description : null,
-    });
+  function onCreate(values: CreateProjectValues) {
+    setCreateError(null);
+    createMutation.mutate(
+      buildOptimisticProjectPayload({
+        name: values.name,
+        description: values.description ? values.description : null,
+      }),
+    );
   }
 
   const openNewProject = useCallback(() => {
@@ -37,6 +44,11 @@ export function AppShell() {
       <div className="app-body">
         <Sidebar onNewProject={openNewProject} />
         <main className="main-content">
+          {createError ? (
+            <div className="alert-error" style={{ margin: "12px 24px 0" }}>
+              {createError}
+            </div>
+          ) : null}
           <Outlet context={{ openNewProject } satisfies AppShellContext} />
         </main>
       </div>

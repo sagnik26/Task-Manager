@@ -4,5 +4,11 @@ export { CreateProjectModal } from "./components/CreateProjectModal";
 export type { CreateProjectValues } from "./components/CreateProjectModal";
 export { ProjectMembersPanel } from "./components/ProjectMembersPanel";
 export { useProjects } from "./hooks/useProjects";
-export { useCreateProject } from "./hooks/useCreateProject";
+export {
+  buildOptimisticProjectPayload,
+  useCreateProject,
+} from "./hooks/useCreateProject";
+export { useDeleteProject } from "./hooks/useDeleteProject";
+export { useRemoveProjectMember } from "./hooks/useRemoveProjectMember";
+export { useAddProjectMember } from "./hooks/useAddProjectMember";
 export type { Project, ProjectMember } from "./types/projects.types";

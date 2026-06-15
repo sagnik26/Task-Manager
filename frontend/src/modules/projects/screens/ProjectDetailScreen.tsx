@@ -9,29 +9,20 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/modules/auth";
 import { ProjectMembersPanel } from "@/modules/projects/components/ProjectMembersPanel";
 import {
   getProject,
-  deleteProject,
   listProjectMembers,
   listProjects,
 } from "@/modules/projects/api/projects.api";
 import { projectKeys } from "@/modules/projects/api/query-keys";
+import { useDeleteProject } from "@/modules/projects/hooks/useDeleteProject";
 import { Can } from "@/shared/permissions/Can";
-import {
-  createTask,
-  deleteTask,
-  listTasks,
-  updateTask,
-} from "@/modules/tasks/api/tasks.api";
+import { listTasks } from "@/modules/tasks/api/tasks.api";
 import { taskKeys } from "@/modules/tasks/api/query-keys";
-import { toApiError } from "@/shared/utils/apiErrors";
-import { EmptyState } from "@/shared/ui/EmptyState";
-import { ErrorState } from "@/shared/ui/ErrorState";
-import { LoadingState } from "@/shared/ui/LoadingState";
 import { KanbanBoard } from "@/modules/tasks/components/KanbanBoard";
 import {
   DEFAULT_TASK_FILTERS,
@@ -44,7 +35,13 @@ import {
   type SortState,
 } from "@/modules/tasks/components/SortPanel";
 import { TaskModal } from "@/modules/tasks/components/TaskModal";
-import { DeleteTaskConfirmModal } from "@/modules/tasks/components/DeleteTaskConfirmModal";
+import { DeleteConfirmModal } from "@/shared/ui/DeleteConfirmModal";
+import {
+  buildOptimisticTaskPayload,
+  useCreateTask,
+} from "@/modules/tasks/hooks/useCreateTask";
+import { useDeleteTask } from "@/modules/tasks/hooks/useDeleteTask";
+import { useUpdateTask } from "@/modules/tasks/hooks/useUpdateTask";
 import {
   applyTaskQuery,
   countActiveFilters,
@@ -52,6 +49,10 @@ import {
   isSortActive,
 } from "@/modules/tasks/utils/applyTaskQuery";
 import { PROJECT_SORT_OPTIONS, projectVisuals } from "@/shared/theme/design";
+import { toApiError } from "@/shared/utils/apiErrors";
+import { EmptyState } from "@/shared/ui/EmptyState";
+import { ErrorState } from "@/shared/ui/ErrorState";
+import { LoadingState } from "@/shared/ui/LoadingState";
 import type { Task, TaskStatus } from "@/modules/tasks/types/tasks.types";
 
 export function ProjectDetailScreen({ projectId }: { projectId: string }) {
@@ -60,7 +61,39 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
   const currentUserId = user?.id ?? "me";
   const userName = user?.name ?? "Me";
 
-  const queryClient = useQueryClient();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [appliedFilterState, setAppliedFilterState] =
+    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [appliedSortState, setAppliedSortState] = useState<SortState>(DEFAULT_SORT);
+  const [draftFilterState, setDraftFilterState] =
+    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
+  const [draftSortState, setDraftSortState] = useState<SortState>(DEFAULT_SORT);
+
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
+  const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
+  const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
+  const [tasksActionError, setTasksActionError] = useState<string | null>(null);
+  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(null);
+
+  const updateTaskMutation = useUpdateTask(projectId, {
+    onError: (message) => setTasksActionError(message),
+  });
+  const createTaskMutation = useCreateTask(projectId, {
+    onError: (message) => setTasksActionError(message),
+  });
+  const deleteTaskMutation = useDeleteTask(projectId, {
+    onError: (message) => setTasksActionError(message),
+  });
+  const deleteProjectMutation = useDeleteProject({
+    onSuccess: () => navigate("/projects"),
+    onError: (message) => setDeleteProjectError(message),
+  });
+
   const projectQuery = useQuery({
     queryKey: projectKeys.detail(projectId),
     queryFn: () => getProject(projectId),
@@ -83,24 +116,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
     queryFn: () => listProjectMembers(projectId),
     enabled: Boolean(projectId),
   });
-
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [membersOpen, setMembersOpen] = useState(false);
-  const [appliedFilterState, setAppliedFilterState] =
-    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
-  const [appliedSortState, setAppliedSortState] = useState<SortState>(DEFAULT_SORT);
-  const [draftFilterState, setDraftFilterState] =
-    useState<TaskFilterState>(DEFAULT_TASK_FILTERS);
-  const [draftSortState, setDraftSortState] = useState<SortState>(DEFAULT_SORT);
-
-  const [taskModalOpen, setTaskModalOpen] = useState(false);
-  const [taskModalMode, setTaskModalMode] = useState<"create" | "edit">("create");
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
-  const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
-  const [tasksActionError, setTasksActionError] = useState<string | null>(null);
-  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(null);
 
   const tasks = useMemo(() => (tasksQuery.data ?? []) as Task[], [tasksQuery.data]);
 
@@ -172,81 +187,6 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
   const projectIndex = (projectsQuery.data ?? []).findIndex((p) => p.id === projectId);
   const { color: projectColor } = projectVisuals(Math.max(0, projectIndex));
 
-  const createTaskMutation = useMutation({
-    mutationFn: (payload: Omit<Task, "id">) => {
-      if (!projectId) throw new Error("projectId is required");
-      return createTask(projectId, {
-        title: payload.title,
-        description: payload.description,
-        status: payload.status,
-        priority: payload.priority,
-        assigneeId: payload.assigneeId,
-        dueDate: payload.dueDate,
-      });
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: taskKeys.byProject(projectId) });
-      await queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
-  });
-
-  const updateTaskMutation = useMutation({
-    mutationFn: ({
-      taskId,
-      patch,
-    }: {
-      taskId: string;
-      patch: Partial<Omit<Task, "id">>;
-    }) => updateTask(taskId, patch),
-    onMutate: async ({ taskId, patch }) => {
-      setTasksActionError(null);
-      await queryClient.cancelQueries({ queryKey: taskKeys.byProject(projectId) });
-      const previous = queryClient.getQueryData(taskKeys.byProject(projectId)) as
-        | Task[]
-        | undefined;
-      if (previous) {
-        queryClient.setQueryData(
-          taskKeys.byProject(projectId),
-          previous.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
-        );
-      }
-      return { previous };
-    },
-    onError: (error, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(taskKeys.byProject(projectId), context.previous);
-      }
-      const apiError = toApiError(error);
-      setTasksActionError(
-        apiError.kind === "forbidden"
-          ? "You don’t have permission to update this task."
-          : apiError.message,
-      );
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: taskKeys.byProject(projectId) });
-    },
-  });
-
-  const deleteTaskMutation = useMutation({
-    mutationFn: (taskId: string) => deleteTask(taskId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: taskKeys.byProject(projectId) });
-      await queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
-  });
-
-  const deleteProjectMutation = useMutation({
-    mutationFn: () => deleteProject(projectId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: projectKeys.all });
-      navigate("/projects");
-    },
-    onError: (error) => {
-      setDeleteProjectError(toApiError(error).message);
-    },
-  });
-
   if (projectQuery.isLoading) {
     return <LoadingState label="Loading project…" />;
   }
@@ -284,12 +224,13 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
     );
   }
 
-  async function handleSaveTask(next: Omit<Task, "id">, existingId?: string) {
+  function handleSaveTask(next: Omit<Task, "id">, existingId?: string) {
+    setTasksActionError(null);
     if (existingId) {
-      await updateTaskMutation.mutateAsync({ taskId: existingId, patch: next });
+      updateTaskMutation.mutate({ taskId: existingId, patch: next });
       return;
     }
-    await createTaskMutation.mutateAsync(next);
+    createTaskMutation.mutate(buildOptimisticTaskPayload(next));
   }
 
   function openCreateTask(status: TaskStatus = "todo") {
@@ -299,13 +240,9 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
     setTaskModalOpen(true);
   }
 
-  function handleDeleteProject() {
-    const ok = window.confirm(
-      `Delete "${project!.name}"? All tasks in this project will be permanently removed.`,
-    );
-    if (!ok) return;
+  function openDeleteProjectModal() {
     setDeleteProjectError(null);
-    deleteProjectMutation.mutate();
+    setDeleteProjectModalOpen(true);
   }
 
   return (
@@ -372,8 +309,7 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
             <button
               type="button"
               className="toolbar-btn toolbar-btn--danger"
-              onClick={handleDeleteProject}
-              disabled={deleteProjectMutation.isPending}
+              onClick={openDeleteProjectModal}
               aria-label="Delete project"
             >
               <Trash2 size={13} />
@@ -382,15 +318,14 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
           </Can>
         </div>
 
-        {deleteProjectError ? (
-          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
-            {deleteProjectError}
-          </div>
-        ) : null}
-
         {tasksActionError ? (
           <div className="alert-error" style={{ margin: "8px 24px 0" }}>
             {tasksActionError}
+          </div>
+        ) : null}
+        {deleteProjectError ? (
+          <div className="alert-error" style={{ margin: "8px 24px 0" }}>
+            {deleteProjectError}
           </div>
         ) : null}
 
@@ -478,11 +413,30 @@ export function ProjectDetailScreen({ projectId }: { projectId: string }) {
         onRequestDelete={(task) => setTaskPendingDelete(task)}
       />
 
-      <DeleteTaskConfirmModal
+      <DeleteConfirmModal
         open={Boolean(taskPendingDelete)}
-        task={taskPendingDelete}
+        title="Delete task"
+        itemName={taskPendingDelete?.title}
+        confirmLabel="Delete task"
         onClose={() => setTaskPendingDelete(null)}
-        onConfirm={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
+        onConfirm={() => {
+          if (!taskPendingDelete) return;
+          setTasksActionError(null);
+          deleteTaskMutation.mutate(taskPendingDelete.id);
+        }}
+      />
+
+      <DeleteConfirmModal
+        open={deleteProjectModalOpen}
+        title="Delete project"
+        itemName={project.name}
+        detail="All tasks in this project will be permanently removed."
+        confirmLabel="Delete project"
+        onClose={() => setDeleteProjectModalOpen(false)}
+        onConfirm={() => {
+          setDeleteProjectError(null);
+          deleteProjectMutation.mutate(project.id);
+        }}
       />
     </>
   );

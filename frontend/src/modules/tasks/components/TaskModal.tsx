@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 
-import { toApiError } from "@/shared/utils/apiErrors";
 import { toDateInputValue } from "@/shared/utils/dates";
 import { TASK_STATUS_COLUMNS, PRIORITY_META } from "@/shared/theme/design";
 import { taskUpsertSchema } from "@/modules/tasks/schemas/task.schemas";
@@ -46,26 +45,23 @@ export function TaskModal({
   assignees: ProjectMember[];
   defaultStatus?: TaskStatus;
   onClose: () => void;
-  onSave: (next: Omit<Task, "id">, existingId?: string) => Promise<void> | void;
+  onSave: (next: Omit<Task, "id">, existingId?: string) => void;
   onRequestDelete?: (task: Task) => void;
 }) {
   const [draft, setDraft] = useState<TaskDraft>(() => toDraft(task, defaultStatus));
-  const [submitting, setSubmitting] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setDraft(toDraft(task, defaultStatus));
     setTitleError(null);
     setDueDateError(null);
-    setSubmitError(null);
   }, [defaultStatus, open, task]);
 
   const canSubmit = useMemo(
-    () => draft.title.trim().length > 0 && !submitting,
-    [draft.title, submitting],
+    () => draft.title.trim().length > 0,
+    [draft.title],
   );
 
   const assigneeOptions = useMemo(() => {
@@ -87,10 +83,9 @@ export function TaskModal({
 
   if (!open) return null;
 
-  async function handleSave() {
+  function handleSave() {
     setTitleError(null);
     setDueDateError(null);
-    setSubmitError(null);
 
     const parsed = taskUpsertSchema.safeParse({
       title: draft.title.trim(),
@@ -110,39 +105,21 @@ export function TaskModal({
       return;
     }
 
-    try {
-      setSubmitting(true);
-      await onSave(
-        {
-          title: parsed.data.title,
-          description: parsed.data.description ? parsed.data.description : null,
-          status: parsed.data.status,
-          priority: parsed.data.priority,
-          assigneeId: parsed.data.assigneeId,
-          dueDate: parsed.data.dueDate,
-        },
-        task?.id,
-      );
-      onClose();
-    } catch (error) {
-      const apiError = toApiError(error);
-      if (apiError.kind === "validation") {
-        setTitleError(apiError.fields.title ?? null);
-        setDueDateError(apiError.fields.due_date ?? null);
-        setSubmitError(apiError.fields.description ?? null);
-        return;
-      }
-      if (apiError.kind === "forbidden") {
-        setSubmitError("You don’t have permission to modify this task.");
-        return;
-      }
-      setSubmitError(apiError.message);
-    } finally {
-      setSubmitting(false);
-    }
+    onSave(
+      {
+        title: parsed.data.title,
+        description: parsed.data.description ? parsed.data.description : null,
+        status: parsed.data.status,
+        priority: parsed.data.priority,
+        assigneeId: parsed.data.assigneeId,
+        dueDate: parsed.data.dueDate,
+      },
+      task?.id,
+    );
+    onClose();
   }
 
-  async function handleDeleteClick() {
+  function handleDeleteClick() {
     if (!task || !onRequestDelete) return;
     onRequestDelete(task);
     onClose();
@@ -175,8 +152,6 @@ export function TaskModal({
         </div>
 
         <div className="modal-card__body">
-          {submitError ? <div className="alert-error" style={{ marginBottom: 15 }}>{submitError}</div> : null}
-
           <div style={{ marginBottom: 15 }}>
             <label className="field-label" htmlFor="task-title">
               Task title
@@ -295,8 +270,7 @@ export function TaskModal({
                 type="button"
                 className="btn btn-outline"
                 style={{ height: 38, padding: "0 18px", marginRight: "auto", color: "var(--danger)", borderColor: "var(--danger)" }}
-                onClick={() => void handleDeleteClick()}
-                disabled={submitting}
+                onClick={handleDeleteClick}
               >
                 Delete
               </button>
@@ -306,7 +280,6 @@ export function TaskModal({
               className="btn btn-outline"
               style={{ height: 38, padding: "0 18px" }}
               onClick={onClose}
-              disabled={submitting}
             >
               Cancel
             </button>
@@ -314,10 +287,10 @@ export function TaskModal({
               type="button"
               className="btn btn-primary btn-primary--sm"
               style={{ height: 38, padding: "0 20px", boxShadow: "0 2px 8px rgba(0,115,234,0.28)" }}
-              onClick={() => void handleSave()}
+              onClick={handleSave}
               disabled={!canSubmit}
             >
-              {submitting ? "Saving…" : mode === "create" ? "Create task" : "Save"}
+              {mode === "create" ? "Create task" : "Save"}
             </button>
           </div>
         </div>

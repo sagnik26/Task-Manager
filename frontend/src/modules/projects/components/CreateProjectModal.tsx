@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 
-import { toApiError } from "@/shared/utils/apiErrors";
-
 export type CreateProjectValues = {
   name: string;
   description: string;
@@ -15,48 +13,33 @@ export function CreateProjectModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreate: (values: CreateProjectValues) => Promise<void> | void;
+  onCreate: (values: CreateProjectValues) => void;
 }) {
   const [values, setValues] = useState<CreateProjectValues>({
     name: "",
     description: "",
   });
-  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string }>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canSubmit = useMemo(
-    () => values.name.trim().length > 0 && !submitting,
-    [submitting, values.name],
+    () => values.name.trim().length > 0,
+    [values.name],
   );
 
   if (!open) return null;
 
-  async function handleCreate() {
+  function handleCreate() {
     setErrors({});
-    setSubmitError(null);
     if (!values.name.trim()) {
       setErrors({ name: "Project name is required" });
       return;
     }
-    try {
-      setSubmitting(true);
-      await onCreate({
-        name: values.name.trim(),
-        description: values.description.trim(),
-      });
-      setValues({ name: "", description: "" });
-      onClose();
-    } catch (error) {
-      const apiError = toApiError(error);
-      if (apiError.kind === "validation") {
-        setErrors({ name: apiError.fields.name });
-      } else {
-        setSubmitError(apiError.message);
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    onCreate({
+      name: values.name.trim(),
+      description: values.description.trim(),
+    });
+    setValues({ name: "", description: "" });
+    onClose();
   }
 
   return (
@@ -78,8 +61,6 @@ export function CreateProjectModal({
         </div>
 
         <div className="modal-card__body">
-          {submitError ? <div className="alert-error" style={{ marginBottom: 15 }}>{submitError}</div> : null}
-
           <div style={{ marginBottom: 13 }}>
             <label className="field-label" htmlFor="project-name">
               Project name
@@ -117,7 +98,6 @@ export function CreateProjectModal({
               className="btn btn-outline"
               style={{ height: 38, padding: "0 18px" }}
               onClick={onClose}
-              disabled={submitting}
             >
               Cancel
             </button>
@@ -125,10 +105,10 @@ export function CreateProjectModal({
               type="button"
               className="btn btn-primary btn-primary--sm"
               style={{ height: 38, padding: "0 20px" }}
-              onClick={() => void handleCreate()}
+              onClick={handleCreate}
               disabled={!canSubmit}
             >
-              {submitting ? "Creating…" : "Create project"}
+              Create project
             </button>
           </div>
         </div>

@@ -8,10 +8,12 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
-import { deleteProject, getProjectStats, listProjects } from "@/modules/projects/api/projects.api";
+import { getProjectStats, listProjects } from "@/modules/projects/api/projects.api";
 import { projectKeys } from "@/modules/projects/api/query-keys";
+import { useDeleteProject } from "@/modules/projects/hooks/useDeleteProject";
+import { DeleteConfirmModal } from "@/shared/ui/DeleteConfirmModal";
 import { useAuth } from "@/modules/auth";
 import { Can } from "@/shared/permissions/Can";
 import { useCan } from "@/shared/permissions/usePermission";
@@ -38,31 +40,17 @@ type ProjectWithStats = Project & {
 
 export function ProjectsListScreen() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { openNewProject } = useOutletContext<AppShellContext>();
   const { user } = useAuth();
   const canCreateProject = useCan("createProject");
+  const [projectPendingDelete, setProjectPendingDelete] = useState<Project | null>(
+    null,
+  );
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const deleteProjectMutation = useMutation({
-    mutationFn: (projectId: string) => deleteProject(projectId),
-    onSuccess: async () => {
-      setDeleteError(null);
-      await queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    },
-    onError: (error) => {
-      setDeleteError(toApiError(error).message);
-    },
+  const deleteProjectMutation = useDeleteProject({
+    onError: (message) => setDeleteError(message),
   });
-
-  function handleDeleteProject(project: Project, event: MouseEvent) {
-    event.stopPropagation();
-    const ok = window.confirm(
-      `Delete "${project.name}"? All tasks in this project will be permanently removed.`,
-    );
-    if (!ok) return;
-    deleteProjectMutation.mutate(project.id);
-  }
 
   const projectsQuery = useQuery({
     queryKey: projectKeys.all,
@@ -70,6 +58,12 @@ export function ProjectsListScreen() {
   });
 
   const projects = projectsQuery.data ?? [];
+
+  function handleDeleteProject(project: Project, event: MouseEvent) {
+    event.stopPropagation();
+    setDeleteError(null);
+    setProjectPendingDelete(project);
+  }
 
   const statsQueries = useQueries({
     queries: projects.map((p) => ({
@@ -146,6 +140,7 @@ export function ProjectsListScreen() {
   }
 
   return (
+    <>
     <div className="page-scroll">
       <div className="dashboard-header">
         <div>
@@ -166,6 +161,12 @@ export function ProjectsListScreen() {
           </button>
         </Can>
       </div>
+
+      {deleteError ? (
+        <div className="alert-error" style={{ margin: "0 24px 16px" }}>
+          {deleteError}
+        </div>
+      ) : null}
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -234,12 +235,6 @@ export function ProjectsListScreen() {
         All projects
       </h2>
 
-      {deleteError ? (
-        <div className="alert-error" style={{ marginBottom: 12 }}>
-          {deleteError}
-        </div>
-      ) : null}
-
       {enriched.length === 0 ? (
         <EmptyState
           title="No projects yet"
@@ -289,7 +284,6 @@ export function ProjectsListScreen() {
                       type="button"
                       className="icon-btn icon-btn--sm icon-btn--danger"
                       onClick={(e) => handleDeleteProject(project, e)}
-                      disabled={deleteProjectMutation.isPending}
                       aria-label={`Delete ${project.name}`}
                     >
                       <Trash2 size={14} />
@@ -327,5 +321,20 @@ export function ProjectsListScreen() {
         </div>
       )}
     </div>
+
+    <DeleteConfirmModal
+      open={Boolean(projectPendingDelete)}
+      title="Delete project"
+      itemName={projectPendingDelete?.name}
+      detail="All tasks in this project will be permanently removed."
+      confirmLabel="Delete project"
+      onClose={() => setProjectPendingDelete(null)}
+      onConfirm={() => {
+        if (!projectPendingDelete) return;
+        setDeleteError(null);
+        deleteProjectMutation.mutate(projectPendingDelete.id);
+      }}
+    />
+    </>
   );
 }

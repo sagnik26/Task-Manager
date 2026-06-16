@@ -268,7 +268,7 @@ See [RBAC implementation guide](./docs/rbac-implementation-guide.md) for route m
 
 - **Framework**: Next.js 15 (App Router), React 19, TypeScript
 - **Routing**: Next.js file-based routes
-- **Server state**: TanStack Query
+- **Server state**: TanStack Query — see [Next.js + TanStack Query guide](./docs/nextjs-tanstack-query.md)
 - **Client state**: Zustand (auth session persistence)
 - **HTTP client**: Axios (`shared/http/client.ts`)
 - **Validation**: Zod (form schemas)
@@ -418,6 +418,7 @@ taskflow-sagnik-ghosh/
 │   └── Dockerfile
 │
 ├── docs/
+│   ├── nextjs-tanstack-query.md
 │   ├── rbac-implementation-guide.md
 │   ├── Frontend-Design-System.md
 │   └── taskflow-sagnik-ghosh.postman_collection.json
@@ -496,6 +497,8 @@ modules/<feature>/              # all feature logic lives here
 - **Client** — login session only (Zustand)
 - **Server** — data from the API (React Query cache)
 - **Local** — temporary UI state: open modals, form fields, filters (`useState`)
+
+**Data fetching architecture** — today the app uses client-side React Query only (no server prefetch/hydration). For the current setup, SSR migration path, and step-by-step guide to the full Next.js + TanStack Query pattern, see [nextjs-tanstack-query.md](./docs/nextjs-tanstack-query.md).
 
 ### Optimistic mutations
 
@@ -625,7 +628,7 @@ When modifying database schemas:
 1. **Module** — add or extend `frontend/src/modules/<feature>/` following the module layout above
 2. **Screen** — full page UI in `modules/<feature>/screens/`
 3. **Route page** — thin wrapper in `src/app/(app)/<feature>/page.tsx`
-4. **API + hooks** — HTTP calls in `modules/<feature>/api/`, React Query hooks in `hooks/`
+4. **API + hooks** — HTTP calls in `modules/<feature>/api/`, React Query hooks in `hooks/` (see [Next.js + TanStack Query guide](./docs/nextjs-tanstack-query.md) for SSR prefetch patterns)
 
 Example route page:
 
